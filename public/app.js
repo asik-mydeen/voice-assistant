@@ -1,99 +1,60 @@
-// === STATE ===
-let supabaseClient = null
+const $ = (s) => document.querySelector(s)
+
+let supabase = null
 let session = null
 let pc = null
 let dc = null
 let audioEl = null
 let isConnected = false
-let pendingFunctionCalls = []
-let aiTranscriptBuffer = ''
+let pendingCalls = []
+let aiTranscript = ''
 
-const $ = (s) => document.querySelector(s)
-
-// === INIT ===
 async function init() {
-  try {
-    const config = await fetch('/api/config').then(r => r.json())
-    supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey)
+  const config = await fetch('/api/config').then(r => r.json())
+  supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey)
 
-    const { data: { session: existing } } = await supabaseClient.auth.getSession()
-    if (existing) { session = existing; showVoiceScreen() }
-    else { showLoginScreen() }
+  const { data: { session: s } } = await supabase.auth.getSession()
+  if (s) { session = s; showVoice() } else { showLogin() }
 
-    supabaseClient.auth.onAuthStateChange((event, s) => {
-      session = s
-      if (event === 'SIGNED_IN') showVoiceScreen()
-      if (event === 'SIGNED_OUT') showLoginScreen()
-    })
-
-    $('#login-btn').addEventListener('click', signIn)
-    $('#logout-btn').addEventListener('click', signOut)
-    $('#mic-btn').addEventListener('click', toggleConnection)
-  } catch (e) {
-    console.error('Init error:', e)
-  }
-}
-
-// === AUTH ===
-async function signIn() {
-  await supabaseClient.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin },
+  supabase.auth.onAuthStateChange((ev, s) => {
+    session = s
+    if (ev === 'SIGNED_IN') showVoice()
+    if (ev === 'SIGNED_OUT') showLogin()
   })
+
+  $('#login-btn').onclick = () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin } })
+  $('#logout-btn').onclick = async () => { await disconnect(); await supabase.auth.signOut(); session = null; showLogin() }
+  $('#mic-btn').onclick = () => isConnected ? disconnect() : connect()
 }
 
-async function signOut() {
-  disconnect()
-  await supabaseClient.auth.signOut()
-  session = null
-  showLoginScreen()
-}
-
-// === UI ===
-function showLoginScreen() {
-  $('#login-screen').classList.remove('hidden')
-  $('#voice-screen').classList.add('hidden')
-}
-
-function showVoiceScreen() {
-  $('#login-screen').classList.add('hidden')
-  $('#voice-screen').classList.remove('hidden')
-}
+function showLogin() { $('#login-screen').classList.remove('hidden'); $('#voice-screen').classList.add('hidden') }
+function showVoice() { $('#login-screen').classList.add('hidden'); $('#voice-screen').classList.remove('hidden') }
 
 function setStatus(text, state) {
   $('#status-text').textContent = text
   document.body.dataset.state = state || 'idle'
 }
 
-function addTranscript(role, text) {
-  const el = document.createElement('div')
-  el.className = 'msg ' + role
-  el.innerHTML = `<span class="msg-role">${role === 'user' ? '🎤' : '🤖'}</span><span class="msg-text">${text}</span>`
-  $('#transcript').appendChild(el)
+function addMsg(role, text) {
+  const d = document.createElement('div')
+  d.className = 'msg ' + role
+  d.innerHTML = `<span class="msg-role">${role === 'user' ? '🎤' : '🤖'}</span><span class="msg-text">${text}</span>`
+  $('#transcript').appendChild(d)
   $('#transcript-area').scrollTop = $('#transcript-area').scrollHeight
-}
-
-// === WEBRTC ===
-async function toggleConnection() {
-  if (isConnected) { disconnect() } else { connect() }
 }
 
 async function connect() {
   try {
     setStatus('Connecting...', 'connecting')
 
-    const tokenRes = await fetch('/api/session', {
+    const res = await fetch('/api/session', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + session.access_token },
     })
-    if (!tokenRes.ok) {
-      const err = await tokenRes.json()
-      throw new Error(err.error || 'Failed to create session')
-    }
-    const { client_secret, model } = await tokenRes.json()
+    if (!res.ok) throw new Error((await res.json()).error || 'Session failed')
+    const { client_secret, model } = await res.json()
 
     pc = new RTCPeerConnection()
-
     audioEl = document.createElement('audio')
     audioEl.autoplay = true
     pc.ontrack = (e) => { audioEl.srcObject = e.streams[0] }
@@ -110,117 +71,91 @@ async function connect() {
       $('#mic-hint').textContent = 'Tap to stop'
     }
     dc.onclose = () => disconnect()
-    dc.onmessage = handleRealtimeEvent
+    dc.onmessage = onEvent
 
     const offer = await pc.createOffer()
     await pc.setLocalDescription(offer)
 
-    const sdpRes = await fetch('https://api.openai.com/v1/realtime?model=' + model, {
+    const sdp = await fetch('https://api.openai.com/v1/realtime?model=' + model, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + client_secret, 'Content-Type': 'application/sdp' },
       body: offer.sdp,
     })
-    if (!sdpRes.ok) throw new Error('Failed to connect to OpenAI Realtime')
+    if (!sdp.ok) throw new Error('WebRTC handshake failed')
 
-    const answer = await sdpRes.text()
-    await pc.setRemoteDescription({ type: 'answer', sdp: answer })
-  } catch (err) {
-    console.error('Connection error:', err)
-    setStatus('Error: ' + err.message, 'error')
+    await pc.setRemoteDescription({ type: 'answer', sdp: await sdp.text() })
+  } catch (e) {
+    console.error(e)
+    setStatus('Error: ' + e.message, 'error')
     disconnect()
   }
 }
 
 function disconnect() {
-  if (pc) {
-    pc.getSenders().forEach(s => { if (s.track) s.track.stop() })
-    pc.close()
-    pc = null
-  }
+  if (pc) { pc.getSenders().forEach(s => { if (s.track) s.track.stop() }); pc.close(); pc = null }
   if (dc) { dc.close(); dc = null }
   if (audioEl) { audioEl.srcObject = null; audioEl = null }
   isConnected = false
-  pendingFunctionCalls = []
-  aiTranscriptBuffer = ''
+  pendingCalls = []
+  aiTranscript = ''
   setStatus('Ready', 'idle')
   $('#mic-icon').classList.remove('hidden')
   $('#stop-icon').classList.add('hidden')
   $('#mic-hint').textContent = 'Tap to start talking'
 }
 
-// === REALTIME EVENTS ===
-function handleRealtimeEvent(event) {
-  const data = JSON.parse(event.data)
-
-  switch (data.type) {
+function onEvent(ev) {
+  const d = JSON.parse(ev.data)
+  switch (d.type) {
     case 'input_audio_buffer.speech_started':
-      setStatus('Listening...', 'listening')
-      break
+      setStatus('Listening...', 'listening'); break
     case 'input_audio_buffer.speech_stopped':
-      setStatus('Processing...', 'thinking')
-      break
+      setStatus('Processing...', 'thinking'); break
     case 'conversation.item.input_audio_transcription.completed':
-      if (data.transcript) addTranscript('user', data.transcript.trim())
-      break
+      if (d.transcript?.trim()) addMsg('user', d.transcript.trim()); break
     case 'response.audio_transcript.delta':
-      aiTranscriptBuffer += (data.delta || '')
-      break
+      aiTranscript += d.delta || ''; break
     case 'response.audio_transcript.done':
-      if (aiTranscriptBuffer.trim()) addTranscript('ai', aiTranscriptBuffer.trim())
-      aiTranscriptBuffer = ''
-      break
+      if (aiTranscript.trim()) addMsg('ai', aiTranscript.trim())
+      aiTranscript = ''; break
     case 'response.function_call_arguments.done':
-      pendingFunctionCalls.push(data)
-      break
+      pendingCalls.push(d); break
     case 'response.created':
-      setStatus('Speaking...', 'speaking')
-      break
+      setStatus('Speaking...', 'speaking'); break
     case 'response.done':
-      if (pendingFunctionCalls.length > 0) {
-        executePendingFunctions()
-      } else {
-        if (isConnected) setStatus('Listening...', 'listening')
-      }
+      if (pendingCalls.length > 0) { runTools() }
+      else if (isConnected) { setStatus('Listening...', 'listening') }
       break
     case 'error':
-      console.error('Realtime error:', data.error)
-      setStatus('Error: ' + (data.error?.message || 'Unknown'), 'error')
-      break
+      console.error('RT error:', d.error)
+      setStatus('Error: ' + (d.error?.message || 'Unknown'), 'error'); break
   }
 }
 
-async function executePendingFunctions() {
-  const calls = [...pendingFunctionCalls]
-  pendingFunctionCalls = []
+async function runTools() {
+  const calls = [...pendingCalls]
+  pendingCalls = []
   setStatus('Running ' + calls.length + ' tool(s)...', 'thinking')
 
-  const results = await Promise.all(calls.map(async (data) => {
-    const { call_id, name, arguments: argsStr } = data
+  const results = await Promise.all(calls.map(async (c) => {
     try {
-      const args = JSON.parse(argsStr || '{}')
-      const res = await fetch('/api/tools/execute', {
+      const args = JSON.parse(c.arguments || '{}')
+      const r = await fetch('/api/tools/execute', {
         method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + session.access_token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, arguments: args }),
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: c.name, arguments: args }),
       })
-      const { result, error } = await res.json()
-      return { call_id, output: typeof result === 'string' ? result : JSON.stringify(result || error || 'No result') }
-    } catch (err) {
-      return { call_id, output: JSON.stringify({ error: err.message }) }
+      const { result, error } = await r.json()
+      return { call_id: c.call_id, output: typeof result === 'string' ? result : JSON.stringify(result || error || 'No result') }
+    } catch (e) {
+      return { call_id: c.call_id, output: JSON.stringify({ error: e.message }) }
     }
   }))
 
-  for (const { call_id, output } of results) {
-    dc.send(JSON.stringify({
-      type: 'conversation.item.create',
-      item: { type: 'function_call_output', call_id, output },
-    }))
+  for (const r of results) {
+    dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: r.call_id, output: r.output } }))
   }
   dc.send(JSON.stringify({ type: 'response.create' }))
 }
 
-// === START ===
 init()

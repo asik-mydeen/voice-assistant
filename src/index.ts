@@ -2,7 +2,7 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { readFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { createSession } from './session.js'
 import { executeTool } from './mcp-client.js'
 
@@ -10,7 +10,7 @@ const app = new Hono()
 
 app.use('/api/*', cors())
 
-// Auth middleware — skips /api/config (public)
+// Auth middleware — skips /api/config
 app.use('/api/*', async (c, next) => {
   if (c.req.path === '/api/config') return next()
 
@@ -45,7 +45,7 @@ app.get('/api/config', (c) => {
   })
 })
 
-// Create OpenAI Realtime session
+// Create ephemeral session
 app.post('/api/session', async (c) => {
   try {
     const session = await createSession()
@@ -75,9 +75,9 @@ app.get('/health', (c) => c.json({ status: 'ok', service: 'voice-assistant' }))
 app.use('/*', serveStatic({ root: './public' }))
 
 // SPA fallback
-app.get('*', async (c) => {
+app.get('*', (c) => {
   try {
-    const html = await readFile('./public/index.html', 'utf-8')
+    const html = readFileSync('./public/index.html', 'utf-8')
     return c.html(html)
   } catch {
     return c.text('Not found', 404)
