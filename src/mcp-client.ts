@@ -24,12 +24,11 @@ class McpSession {
     this.token = token
   }
 
-  private async post(body: any, headers?: Record<string, string>): Promise<Response> {
+  private async post(body: any): Promise<Response> {
     const h: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${this.token}`,
       'Accept': 'application/json, text/event-stream',
-      ...headers,
     }
     if (this.sessionId) h['Mcp-Session-Id'] = this.sessionId
     return fetch(`${this.baseUrl}/mcp`, { method: 'POST', headers: h, body: JSON.stringify(body) })
@@ -80,10 +79,9 @@ class McpSession {
         params: { name, arguments: args },
         id: 'call-' + Date.now(),
       })
-      if (!res.ok) throw new Error(`MCP HTTP ${res.status}`)
+      if (!res.ok) throw new Error('MCP HTTP ' + res.status)
       return this.parseResponse(res)
     } catch (e) {
-      // Retry with fresh session
       this.initialized = false
       this.sessionId = null
       await this.init()
