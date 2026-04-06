@@ -1,0 +1,135 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #16161e;
+  --surface-2: #1e1e2a;
+  --text: #e4e4e7;
+  --text-dim: #71717a;
+  --accent: #6366f1;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100dvh;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#app { height: 100dvh; display: flex; flex-direction: column; }
+
+.screen {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hidden { display: none !important; }
+
+/* LOGIN */
+#login-screen { gap: 16px; }
+.logo { font-size: 64px; margin-bottom: 8px; }
+#login-screen h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+.subtitle { color: var(--text-dim); margin-bottom: 24px; }
+
+.btn-google {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 24px; background: white; color: #333;
+  border: none; border-radius: 12px; font-size: 16px; font-weight: 500;
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-google:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(255,255,255,0.1); }
+.btn-google:active { transform: scale(0.98); }
+
+/* VOICE SCREEN */
+#voice-screen { justify-content: flex-start; padding: 0; }
+
+#status-bar {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; padding-top: max(16px, env(safe-area-inset-top));
+}
+#status-text { font-size: 14px; color: var(--text-dim); font-weight: 500; }
+
+.btn-icon {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 18px; cursor: pointer; padding: 8px; border-radius: 8px;
+  transition: background 0.15s;
+}
+.btn-icon:hover { background: var(--surface-2); }
+
+/* TRANSCRIPT */
+#transcript-area {
+  flex: 1; width: 100%; overflow-y: auto; padding: 0 20px;
+  -webkit-overflow-scrolling: touch;
+}
+#transcript { display: flex; flex-direction: column; gap: 12px; padding-bottom: 20px; }
+
+.msg { display: flex; gap: 10px; align-items: flex-start; animation: fadeIn 0.2s ease; }
+.msg-role { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+.msg-text { font-size: 15px; line-height: 1.5; color: var(--text); }
+.msg.user .msg-text { color: var(--text-dim); }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* MIC BUTTON */
+#mic-container {
+  position: relative; display: flex; align-items: center;
+  justify-content: center; padding: 24px 0;
+}
+
+.mic-button {
+  width: 80px; height: 80px; border-radius: 50%; background: var(--accent);
+  border: none; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; position: relative; z-index: 2;
+  transition: transform 0.15s, background 0.15s;
+}
+.mic-button:hover { transform: scale(1.05); }
+.mic-button:active { transform: scale(0.95); }
+
+#pulse-ring {
+  position: absolute; width: 80px; height: 80px; border-radius: 50%;
+  border: 2px solid var(--accent); opacity: 0; z-index: 1;
+}
+
+#mic-hint {
+  text-align: center; color: var(--text-dim); font-size: 13px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+/* STATES */
+[data-state="listening"] .mic-button { background: var(--success); }
+[data-state="listening"] #pulse-ring { border-color: var(--success); animation: pulse 2s ease-out infinite; }
+
+[data-state="thinking"] .mic-button { background: var(--warning); animation: breathe 1s ease-in-out infinite; }
+
+[data-state="speaking"] .mic-button { background: var(--accent); animation: breathe 0.8s ease-in-out infinite; }
+[data-state="speaking"] #pulse-ring { border-color: var(--accent); animation: pulse 1.5s ease-out infinite; }
+
+[data-state="connecting"] .mic-button { background: var(--text-dim); animation: breathe 0.6s ease-in-out infinite; }
+
+[data-state="error"] .mic-button { background: var(--error); }
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+#transcript-area::-webkit-scrollbar { width: 4px; }
+#transcript-area::-webkit-scrollbar-track { background: transparent; }
+#transcript-area::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 2px; }
