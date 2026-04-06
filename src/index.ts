@@ -10,7 +10,6 @@ const app = new Hono()
 
 app.use('/api/*', cors())
 
-// Auth middleware — skips /api/config
 app.use('/api/*', async (c, next) => {
   if (c.req.path === '/api/config') return next()
 
@@ -37,7 +36,6 @@ app.use('/api/*', async (c, next) => {
   }
 })
 
-// Public config
 app.get('/api/config', (c) => {
   return c.json({
     supabaseUrl: process.env.SUPABASE_URL,
@@ -45,7 +43,6 @@ app.get('/api/config', (c) => {
   })
 })
 
-// Create ephemeral session
 app.post('/api/session', async (c) => {
   try {
     const session = await createSession()
@@ -56,7 +53,6 @@ app.post('/api/session', async (c) => {
   }
 })
 
-// Execute MCP tool
 app.post('/api/tools/execute', async (c) => {
   try {
     const { name, arguments: args } = await c.req.json()
@@ -71,10 +67,8 @@ app.post('/api/tools/execute', async (c) => {
 
 app.get('/health', (c) => c.json({ status: 'ok', service: 'voice-assistant' }))
 
-// Static files
 app.use('/*', serveStatic({ root: './public' }))
 
-// SPA fallback
 app.get('*', (c) => {
   try {
     const html = readFileSync('./public/index.html', 'utf-8')
