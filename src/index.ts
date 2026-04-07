@@ -6,7 +6,6 @@ import { readFile } from 'node:fs/promises'
 import { createSession } from './session.js'
 import { executeTool } from './mcp-client.js'
 import { handleWebSocket } from './ws-relay.js'
-import { createServer } from 'node:http'
 import { WebSocketServer } from 'ws'
 
 const app = new Hono()
@@ -44,7 +43,7 @@ app.post('/api/tools/execute', async (c) => {
   } catch (e: any) { console.error('Tool error:', e); return c.json({ error: e.message }, 500) }
 })
 
-app.get('/health', (c) => c.json({ status: 'ok', service: 'voice-assistant' }))
+app.get('/health', (c) => c.json({ status: 'ok', service: 'zara-voice' }))
 
 app.use('/*', async (c, next) => {
   await next()
@@ -62,13 +61,13 @@ app.get('*', async (c) => {
 })
 
 const port = parseInt(process.env.PORT || '3000')
-const server = createServer(app.fetch as any)
+const server = serve({ fetch: app.fetch, port }, () => {
+  console.log(`Zara running on port ${port}`)
+})
 
-// WebSocket server for ESP32
-const wss = new WebSocketServer({ server, path: '/api/ws' })
+// Attach WebSocket server for ESP32 on the same HTTP server
+const wss = new WebSocketServer({ server: server as any, path: '/api/ws' })
 wss.on('connection', (ws, req) => {
   console.log('ESP32 WebSocket connected from', req.socket.remoteAddress)
   handleWebSocket(ws)
 })
-
-server.listen(port, () => console.log(`Zara running on port ${port}`))
