@@ -5,6 +5,9 @@ import { cors } from 'hono/cors'
 import { readFile } from 'node:fs/promises'
 import { createSession } from './session.js'
 import { executeTool } from './mcp-client.js'
+import { handleWebSocket } from './ws-relay.js'
+import { createServer } from 'node:http'
+import { WebSocketServer } from 'ws'
 
 const app = new Hono()
 
@@ -43,7 +46,6 @@ app.post('/api/tools/execute', async (c) => {
 
 app.get('/health', (c) => c.json({ status: 'ok', service: 'voice-assistant' }))
 
-// No-cache headers for static files so Cloudflare doesn't cache them
 app.use('/*', async (c, next) => {
   await next()
   if (c.req.path.match(/\.(js|css|html)$/)) {
@@ -60,4 +62,13 @@ app.get('*', async (c) => {
 })
 
 const port = parseInt(process.env.PORT || '3000')
-serve({ fetch: app.fetch, port }, () => console.log(`Voice Assistant running on port ${port}`))
+const server = createServer(app.fetch as any)
+
+// WebSocket server for ESP32
+const wss = new WebSocketServer({ server, path: '/api/ws' })
+wss.on('connection', (ws, req) => {
+  console.log('ESP32 WebSocket connected from', req.socket.remoteAddress)
+  handleWebSocket(ws)
+})
+
+server.listen(port, () => console.log(`Zara running on port ${port}`))

@@ -37,5 +37,7 @@ export async function createSession() {
     model,
     voice,
     expires_at: data.client_secret.expires_at,
+    systemPrompt: SYSTEM_PROMPT,
+    tools: FUNCTIONS,
   }
 }
