@@ -15,15 +15,6 @@ const $ = (s) => document.querySelector(s)
 
 // === INIT ===
 async function init() {
-  $('#login-btn').addEventListener('click', signIn)
-  $('#logout-btn').addEventListener('click', signOut)
-  $('#mic-btn').addEventListener('click', toggleConnection)
-  $('#settings-btn').addEventListener('click', openSettings)
-  $('#settings-close').addEventListener('click', closeSettings)
-  $('#text-input-submit').addEventListener('click', submitTextInput)
-  $('#text-input-field').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitTextInput() })
-  $('#enroll-cancel').addEventListener('click', () => $('#enroll-overlay').classList.add('hidden'))
-
   try {
     const config = await fetch('/api/config').then(r => r.json())
     if (!config.supabaseUrl || !config.supabaseAnonKey) return showLoginScreen()
@@ -58,20 +49,23 @@ function showLoginScreen() {
 function showVoiceScreen() {
   $('#login-screen').classList.add('hidden')
   $('#voice-screen').classList.remove('hidden')
+  setStatus('Ready', 'idle')
   updateSpeakerBadge()
 }
 function setStatus(text, state) {
   $('#status-text').textContent = text
   document.body.dataset.state = state || 'idle'
+  // Update hint
+  if (state === 'idle' || state === 'error') $('#mic-hint').textContent = 'Tap to start talking'
+  else if (state === 'connecting') $('#mic-hint').textContent = 'Connecting...'
+  else if (state === 'listening') $('#mic-hint').textContent = 'Listening • Tap to stop'
+  else if (state === 'thinking') $('#mic-hint').textContent = 'Thinking...'
+  else if (state === 'speaking') $('#mic-hint').textContent = 'Speaking • Tap to stop'
 }
 function updateSpeakerBadge() {
   const badge = $('#speaker-badge')
-  if (currentSpeaker) {
-    badge.textContent = currentSpeaker
-    badge.classList.remove('hidden')
-  } else {
-    badge.classList.add('hidden')
-  }
+  if (currentSpeaker) { badge.textContent = currentSpeaker; badge.classList.remove('hidden') }
+  else { badge.classList.add('hidden') }
 }
 function addTranscript(role, text) {
   const el = document.createElement('div')
@@ -99,8 +93,7 @@ function renderFamilyList() {
       '<span class="fc-status ' + (enrolled ? 'enrolled' : '') + '">' + (enrolled ? '✓ Enrolled' : 'Not enrolled') + '</span></div>' +
       '<div class="fc-actions">' +
       '<button class="btn-sm btn-enroll" data-name="' + name + '">' + (enrolled ? 'Re-enroll' : 'Enroll') + '</button>' +
-      (enrolled ? '<button class="btn-sm btn-delete" data-name="' + name + '">✕</button>' : '') +
-      '</div>'
+      (enrolled ? '<button class="btn-sm btn-delete" data-name="' + name + '">✕</button>' : '') + '</div>'
     list.appendChild(card)
   }
   list.querySelectorAll('.btn-enroll').forEach(btn => btn.addEventListener('click', () => startEnrollment(btn.dataset.name)))
@@ -114,7 +107,7 @@ async function startEnrollment(name) {
   $('#enroll-animation').classList.add('recording')
   try {
     await voiceId.enroll(name, 8000)
-    $('#enroll-status').textContent = 'Done! Voice profile saved.'
+    $('#enroll-status').textContent = '✓ Voice profile saved!'
     $('#enroll-animation').classList.remove('recording')
     setTimeout(() => { $('#enroll-overlay').classList.add('hidden'); renderFamilyList() }, 1500)
   } catch (e) {
@@ -146,19 +139,17 @@ async function toggleConnection() {
 
 async function connect() {
   try {
-    // Voice ID check if profiles exist
     const hasProfiles = voiceId.getEnrolledNames().length > 0
     if (hasProfiles) {
-      setStatus('Identifying voice...', 'connecting')
+      setStatus('Identifying...', 'connecting')
       const match = await voiceId.identify(2500)
       if (match) {
         currentSpeaker = match.name
         updateSpeakerBadge()
-        setStatus('Hi ' + match.name + '! Connecting...', 'connecting')
+        setStatus('Hi ' + match.name + '!', 'connecting')
       } else {
-        currentSpeaker = null
-        updateSpeakerBadge()
-        setStatus('Voice not recognized. Connecting as guest...', 'connecting')
+        currentSpeaker = null; updateSpeakerBadge()
+        setStatus('Connecting...', 'connecting')
       }
     } else {
       setStatus('Connecting...', 'connecting')
@@ -182,14 +173,10 @@ async function connect() {
     dc.onopen = () => {
       isConnected = true
       setStatus('Listening...', 'listening')
-      $('#mic-icon').classList.add('hidden')
-      $('#stop-icon').classList.remove('hidden')
-      $('#mic-hint').textContent = 'Tap to stop'
-      // Inject speaker identity via session.update
       if (currentSpeaker) {
         dc.send(JSON.stringify({
           type: 'session.update',
-          session: { instructions: 'The current speaker has been identified as ' + currentSpeaker + ' via voice recognition. Address them by name. Personalize responses for this family member.' }
+          session: { instructions: 'The current speaker is ' + currentSpeaker + '. Address them by name and personalize responses.' }
         }))
       }
     }
@@ -203,7 +190,7 @@ async function connect() {
       headers: { 'Authorization': 'Bearer ' + client_secret, 'Content-Type': 'application/sdp' },
       body: offer.sdp,
     })
-    if (!sdpRes.ok) throw new Error('Failed to connect to OpenAI Realtime')
+    if (!sdpRes.ok) throw new Error('Failed to connect to OpenAI')
     await pc.setRemoteDescription({ type: 'answer', sdp: await sdpRes.text() })
   } catch (err) {
     console.error('Connection error:', err)
@@ -218,9 +205,6 @@ function disconnect() {
   if (audioEl) { audioEl.srcObject = null; audioEl = null }
   isConnected = false; pendingFunctionCalls = []; aiTranscriptBuffer = ''
   setStatus('Ready', 'idle')
-  $('#mic-icon').classList.remove('hidden')
-  $('#stop-icon').classList.add('hidden')
-  $('#mic-hint').textContent = 'Tap to start talking'
 }
 
 // === REALTIME EVENTS ===
@@ -236,11 +220,8 @@ function handleRealtimeEvent(event) {
       if (aiTranscriptBuffer.trim()) addTranscript('ai', aiTranscriptBuffer.trim())
       aiTranscriptBuffer = ''; break
     case 'response.function_call_arguments.done':
-      if (data.name === 'request_text_input') {
-        handleTextInputCall(data)
-      } else {
-        pendingFunctionCalls.push(data)
-      }
+      if (data.name === 'request_text_input') { handleTextInputCall(data) }
+      else { pendingFunctionCalls.push(data) }
       break
     case 'response.created': setStatus('Speaking...', 'speaking'); break
     case 'response.done':
@@ -255,17 +236,15 @@ function handleRealtimeEvent(event) {
 
 async function handleTextInputCall(data) {
   const { call_id } = data
-  let args = {}
-  try { args = JSON.parse(data.arguments || '{}') } catch {}
+  let args = {}; try { args = JSON.parse(data.arguments || '{}') } catch {}
   const value = await showTextInput(args.prompt, args.type)
   dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id, output: value || '' } }))
   dc.send(JSON.stringify({ type: 'response.create' }))
 }
 
 async function executePendingFunctions() {
-  const calls = [...pendingFunctionCalls]
-  pendingFunctionCalls = []
-  setStatus('Running ' + calls.length + ' tool(s)...', 'thinking')
+  const calls = [...pendingFunctionCalls]; pendingFunctionCalls = []
+  setStatus('Running tools...', 'thinking')
   const results = await Promise.all(calls.map(async (data) => {
     const { call_id, name, arguments: argsStr } = data
     try {

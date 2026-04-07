@@ -31,17 +31,21 @@
           <span id="speaker-badge" class="hidden"></span>
         </div>
         <div id="status-actions">
-          <button id="settings-btn" class="btn-icon" onclick="openSettings()" title="Voice Profiles">👤</button>
-          <button id="logout-btn" class="btn-icon" onclick="signOut()" title="Sign out">⏻</button>
+          <button id="settings-btn" class="btn-icon" onclick="openSettings()">👤</button>
+          <button id="logout-btn" class="btn-icon" onclick="signOut()">⏻</button>
         </div>
       </div>
+
       <div id="transcript-area"><div id="transcript"></div></div>
-      <div id="mic-container">
-        <div id="pulse-ring"></div>
-        <button id="mic-btn" class="mic-button" onclick="toggleConnection()">
-          <svg id="mic-icon" viewBox="0 0 24 24" width="36" height="36" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-          <svg id="stop-icon" class="hidden" viewBox="0 0 24 24" width="36" height="36" fill="white"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-        </button>
+
+      <div id="voice-orb-container" onclick="toggleConnection()">
+        <div id="orb-glow"></div>
+        <div id="orb">
+          <div class="orb-layer orb-1"></div>
+          <div class="orb-layer orb-2"></div>
+          <div class="orb-layer orb-3"></div>
+        </div>
+        <div id="orb-ring"></div>
       </div>
       <p id="mic-hint">Tap to start talking</p>
     </div>
@@ -51,7 +55,7 @@
       <div class="panel">
         <div class="panel-header">
           <h2>Voice Profiles</h2>
-          <button id="settings-close" class="btn-icon" onclick="closeSettings()">✕</button>
+          <button class="btn-icon" onclick="closeSettings()">✕</button>
         </div>
         <p class="panel-desc">Enroll voice IDs so Akisa knows who's speaking.</p>
         <div id="family-list"></div>
@@ -63,7 +67,7 @@
       <div class="panel">
         <p id="text-input-prompt"></p>
         <input id="text-input-field" type="text" autocomplete="off" />
-        <button id="text-input-submit" class="btn-primary" onclick="submitTextInput()">Submit</button>
+        <button class="btn-primary" onclick="submitTextInput()">Submit</button>
       </div>
     </div>
 
@@ -73,7 +77,7 @@
         <h2 id="enroll-title">Enrolling...</h2>
         <div id="enroll-animation" class="enroll-anim">🎤</div>
         <p id="enroll-status">Speak naturally for 8 seconds...</p>
-        <button id="enroll-cancel" class="btn-secondary" onclick="$('#enroll-overlay').classList.add('hidden')">Cancel</button>
+        <button class="btn-secondary" onclick="$('#enroll-overlay').classList.add('hidden')">Cancel</button>
       </div>
     </div>
   </div>
