@@ -1,27 +1,30 @@
 // === STATE ===
-let supabaseClient = null
-let session = null
-let pc = null
-let dc = null
-let audioEl = null
-let isConnected = false
-let pendingFunctionCalls = []
-let aiTranscriptBuffer = ''
-let currentSpeaker = null
-let voiceId = new VoiceID()
-let textInputResolve = null
-const FAMILY = ['Asik', 'Nikkath', 'Aarish', 'Aaraa']
-const $ = (s) => document.querySelector(s)
+var supabaseClient = null
+var session = null
+var pc = null
+var dc = null
+var audioEl = null
+var isConnected = false
+var pendingFunctionCalls = []
+var aiTranscriptBuffer = ''
+var currentSpeaker = null
+var voiceId = null
+var textInputResolve = null
+var FAMILY = ['Asik', 'Nikkath', 'Aarish', 'Aaraa']
+
+try { voiceId = new VoiceID() } catch(e) { console.warn('VoiceID not available:', e) }
+
+function $(s) { return document.querySelector(s) }
 
 // === INIT ===
 async function init() {
   try {
-    const config = await fetch('/api/config').then(r => r.json())
+    var config = await fetch('/api/config').then(function(r) { return r.json() })
     if (!config.supabaseUrl || !config.supabaseAnonKey) return showLoginScreen()
     supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey)
-    const { data: { session: existing } } = await supabaseClient.auth.getSession()
-    if (existing) { session = existing; showVoiceScreen() } else { showLoginScreen() }
-    supabaseClient.auth.onAuthStateChange((ev, s) => {
+    var result = await supabaseClient.auth.getSession()
+    if (result.data.session) { session = result.data.session; showVoiceScreen() } else { showLoginScreen() }
+    supabaseClient.auth.onAuthStateChange(function(ev, s) {
       session = s
       if (ev === 'SIGNED_IN') showVoiceScreen()
       if (ev === 'SIGNED_OUT') showLoginScreen()
@@ -30,13 +33,13 @@ async function init() {
 }
 
 // === AUTH ===
-async function signIn() {
+function signIn() {
   if (!supabaseClient) return
-  await supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
+  supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
 }
-async function signOut() {
+function signOut() {
   disconnect()
-  if (supabaseClient) await supabaseClient.auth.signOut()
+  if (supabaseClient) supabaseClient.auth.signOut()
   session = null; currentSpeaker = null
   showLoginScreen()
 }
@@ -49,33 +52,28 @@ function showLoginScreen() {
 function showVoiceScreen() {
   $('#login-screen').classList.add('hidden')
   $('#voice-screen').classList.remove('hidden')
-  setStatus('Ready', 'idle')
+  setStatus('Tap the orb to start', 'idle')
   updateSpeakerBadge()
 }
 function setStatus(text, state) {
   $('#status-text').textContent = text
   document.body.dataset.state = state || 'idle'
-  // Update hint
-  if (state === 'idle' || state === 'error') $('#mic-hint').textContent = 'Tap to start talking'
-  else if (state === 'connecting') $('#mic-hint').textContent = 'Connecting...'
-  else if (state === 'listening') $('#mic-hint').textContent = 'Listening • Tap to stop'
-  else if (state === 'thinking') $('#mic-hint').textContent = 'Thinking...'
-  else if (state === 'speaking') $('#mic-hint').textContent = 'Speaking • Tap to stop'
 }
 function updateSpeakerBadge() {
-  const badge = $('#speaker-badge')
+  var badge = $('#speaker-badge')
   if (currentSpeaker) { badge.textContent = currentSpeaker; badge.classList.remove('hidden') }
   else { badge.classList.add('hidden') }
 }
 function addTranscript(role, text) {
-  const el = document.createElement('div')
+  var el = document.createElement('div')
   el.className = 'msg ' + role
-  el.innerHTML = '<span class="msg-role">' + (role === 'user' ? '🎤' : '🤖') + '</span><span class="msg-text">' + text + '</span>'
+  el.innerHTML = '<span class="msg-role">' + (role === 'user' ? '\u{1F3A4}' : '\u{1F916}') + '</span><span class="msg-text">' + text + '</span>'
   $('#transcript').appendChild(el)
-  $('#transcript-area').scrollTop = $('#transcript-area').scrollHeight
+  var area = $('#transcript-area')
+  area.scrollTop = area.scrollHeight
 }
 
-// === SETTINGS / VOICE PROFILES ===
+// === SETTINGS ===
 function openSettings() {
   renderFamilyList()
   $('#settings-panel').classList.remove('hidden')
@@ -83,21 +81,25 @@ function openSettings() {
 function closeSettings() { $('#settings-panel').classList.add('hidden') }
 
 function renderFamilyList() {
-  const list = $('#family-list')
+  var list = $('#family-list')
   list.innerHTML = ''
-  for (const name of FAMILY) {
-    const enrolled = voiceId.hasProfile(name)
-    const card = document.createElement('div')
+  FAMILY.forEach(function(name) {
+    var enrolled = voiceId && voiceId.hasProfile(name)
+    var card = document.createElement('div')
     card.className = 'family-card'
     card.innerHTML = '<div class="fc-info"><span class="fc-name">' + name + '</span>' +
-      '<span class="fc-status ' + (enrolled ? 'enrolled' : '') + '">' + (enrolled ? '✓ Enrolled' : 'Not enrolled') + '</span></div>' +
+      '<span class="fc-status ' + (enrolled ? 'enrolled' : '') + '">' + (enrolled ? '\u2713 Enrolled' : 'Not enrolled') + '</span></div>' +
       '<div class="fc-actions">' +
       '<button class="btn-sm btn-enroll" data-name="' + name + '">' + (enrolled ? 'Re-enroll' : 'Enroll') + '</button>' +
-      (enrolled ? '<button class="btn-sm btn-delete" data-name="' + name + '">✕</button>' : '') + '</div>'
+      (enrolled ? '<button class="btn-sm btn-delete" data-name="' + name + '">\u2715</button>' : '') + '</div>'
     list.appendChild(card)
-  }
-  list.querySelectorAll('.btn-enroll').forEach(btn => btn.addEventListener('click', () => startEnrollment(btn.dataset.name)))
-  list.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => { voiceId.deleteProfile(btn.dataset.name); renderFamilyList() }))
+  })
+  list.querySelectorAll('.btn-enroll').forEach(function(btn) {
+    btn.addEventListener('click', function() { startEnrollment(btn.dataset.name) })
+  })
+  list.querySelectorAll('.btn-delete').forEach(function(btn) {
+    btn.addEventListener('click', function() { voiceId.deleteProfile(btn.dataset.name); renderFamilyList() })
+  })
 }
 
 async function startEnrollment(name) {
@@ -107,9 +109,9 @@ async function startEnrollment(name) {
   $('#enroll-animation').classList.add('recording')
   try {
     await voiceId.enroll(name, 8000)
-    $('#enroll-status').textContent = '✓ Voice profile saved!'
+    $('#enroll-status').textContent = '\u2713 Voice profile saved!'
     $('#enroll-animation').classList.remove('recording')
-    setTimeout(() => { $('#enroll-overlay').classList.add('hidden'); renderFamilyList() }, 1500)
+    setTimeout(function() { $('#enroll-overlay').classList.add('hidden'); renderFamilyList() }, 1500)
   } catch (e) {
     $('#enroll-status').textContent = 'Error: ' + e.message
     $('#enroll-animation').classList.remove('recording')
@@ -119,58 +121,54 @@ async function startEnrollment(name) {
 // === TEXT INPUT ===
 function showTextInput(prompt, type) {
   $('#text-input-prompt').textContent = prompt || 'Enter value:'
-  const field = $('#text-input-field')
+  var field = $('#text-input-field')
   field.type = type || 'text'
   field.value = ''
   $('#text-input-overlay').classList.remove('hidden')
   field.focus()
-  return new Promise(resolve => { textInputResolve = resolve })
+  return new Promise(function(resolve) { textInputResolve = resolve })
 }
 function submitTextInput() {
-  const val = $('#text-input-field').value
+  var val = $('#text-input-field').value
   $('#text-input-overlay').classList.add('hidden')
   if (textInputResolve) { textInputResolve(val); textInputResolve = null }
 }
 
 // === WEBRTC ===
-async function toggleConnection() {
+function toggleConnection() {
   if (isConnected) { disconnect() } else { connect() }
 }
 
 async function connect() {
   try {
-    const hasProfiles = voiceId.getEnrolledNames().length > 0
+    // Voice ID
+    var hasProfiles = voiceId && voiceId.getEnrolledNames().length > 0
     if (hasProfiles) {
       setStatus('Identifying...', 'connecting')
-      const match = await voiceId.identify(2500)
-      if (match) {
-        currentSpeaker = match.name
-        updateSpeakerBadge()
-        setStatus('Hi ' + match.name + '!', 'connecting')
-      } else {
-        currentSpeaker = null; updateSpeakerBadge()
-        setStatus('Connecting...', 'connecting')
-      }
+      var match = await voiceId.identify(2500)
+      if (match) { currentSpeaker = match.name; updateSpeakerBadge(); setStatus('Hi ' + match.name + '!', 'connecting') }
+      else { currentSpeaker = null; updateSpeakerBadge(); setStatus('Connecting...', 'connecting') }
     } else {
       setStatus('Connecting...', 'connecting')
     }
 
-    const tokenRes = await fetch('/api/session', {
+    var tokenRes = await fetch('/api/session', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + session.access_token },
     })
-    if (!tokenRes.ok) { const err = await tokenRes.json(); throw new Error(err.error || 'Session failed') }
-    const { client_secret, model } = await tokenRes.json()
+    if (!tokenRes.ok) { var err = await tokenRes.json(); throw new Error(err.error || 'Session failed') }
+    var sessionData = await tokenRes.json()
 
     pc = new RTCPeerConnection()
+
+    // Audio output
     audioEl = document.createElement('audio')
     audioEl.autoplay = true
-    pc.ontrack = (e) => { audioEl.srcObject = e.streams[0] }
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    pc.addTrack(stream.getTracks()[0])
+    pc.ontrack = function(e) { audioEl.srcObject = e.streams[0] }
 
+    // Data channel FIRST (fixes m-line ordering)
     dc = pc.createDataChannel('oai-events')
-    dc.onopen = () => {
+    dc.onopen = function() {
       isConnected = true
       setStatus('Listening...', 'listening')
       if (currentSpeaker) {
@@ -180,18 +178,24 @@ async function connect() {
         }))
       }
     }
-    dc.onclose = () => disconnect()
+    dc.onclose = function() { disconnect() }
     dc.onmessage = handleRealtimeEvent
 
-    const offer = await pc.createOffer()
+    // Audio input AFTER data channel
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    pc.addTrack(stream.getTracks()[0])
+
+    // SDP exchange
+    var offer = await pc.createOffer()
     await pc.setLocalDescription(offer)
-    const sdpRes = await fetch('https://api.openai.com/v1/realtime?model=' + model, {
+    var sdpRes = await fetch('https://api.openai.com/v1/realtime?model=' + sessionData.model, {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + client_secret, 'Content-Type': 'application/sdp' },
+      headers: { 'Authorization': 'Bearer ' + sessionData.client_secret, 'Content-Type': 'application/sdp' },
       body: offer.sdp,
     })
     if (!sdpRes.ok) throw new Error('Failed to connect to OpenAI')
-    await pc.setRemoteDescription({ type: 'answer', sdp: await sdpRes.text() })
+    var answerSdp = await sdpRes.text()
+    await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
   } catch (err) {
     console.error('Connection error:', err)
     setStatus('Error: ' + err.message, 'error')
@@ -200,16 +204,16 @@ async function connect() {
 }
 
 function disconnect() {
-  if (pc) { pc.getSenders().forEach(s => { if (s.track) s.track.stop() }); pc.close(); pc = null }
+  if (pc) { pc.getSenders().forEach(function(s) { if (s.track) s.track.stop() }); pc.close(); pc = null }
   if (dc) { dc.close(); dc = null }
   if (audioEl) { audioEl.srcObject = null; audioEl = null }
   isConnected = false; pendingFunctionCalls = []; aiTranscriptBuffer = ''
-  setStatus('Ready', 'idle')
+  setStatus('Tap the orb to start', 'idle')
 }
 
 // === REALTIME EVENTS ===
 function handleRealtimeEvent(event) {
-  const data = JSON.parse(event.data)
+  var data = JSON.parse(event.data)
   switch (data.type) {
     case 'input_audio_buffer.speech_started': setStatus('Listening...', 'listening'); break
     case 'input_audio_buffer.speech_stopped': setStatus('Processing...', 'thinking'); break
@@ -235,32 +239,30 @@ function handleRealtimeEvent(event) {
 }
 
 async function handleTextInputCall(data) {
-  const { call_id } = data
-  let args = {}; try { args = JSON.parse(data.arguments || '{}') } catch {}
-  const value = await showTextInput(args.prompt, args.type)
-  dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id, output: value || '' } }))
+  var args = {}; try { args = JSON.parse(data.arguments || '{}') } catch(e) {}
+  var value = await showTextInput(args.prompt, args.type)
+  dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: data.call_id, output: value || '' } }))
   dc.send(JSON.stringify({ type: 'response.create' }))
 }
 
 async function executePendingFunctions() {
-  const calls = [...pendingFunctionCalls]; pendingFunctionCalls = []
+  var calls = pendingFunctionCalls.slice(); pendingFunctionCalls = []
   setStatus('Running tools...', 'thinking')
-  const results = await Promise.all(calls.map(async (data) => {
-    const { call_id, name, arguments: argsStr } = data
+  var results = await Promise.all(calls.map(async function(data) {
     try {
-      const args = JSON.parse(argsStr || '{}')
-      const res = await fetch('/api/tools/execute', {
+      var args = JSON.parse(data.arguments || '{}')
+      var res = await fetch('/api/tools/execute', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, arguments: args }),
+        body: JSON.stringify({ name: data.name, arguments: args }),
       })
-      const { result, error } = await res.json()
-      return { call_id, output: typeof result === 'string' ? result : JSON.stringify(result || error || 'No result') }
-    } catch (err) { return { call_id, output: JSON.stringify({ error: err.message }) } }
+      var json = await res.json()
+      return { call_id: data.call_id, output: typeof json.result === 'string' ? json.result : JSON.stringify(json.result || json.error || 'No result') }
+    } catch (err) { return { call_id: data.call_id, output: JSON.stringify({ error: err.message }) } }
   }))
-  for (const { call_id, output } of results) {
-    dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id, output } }))
-  }
+  results.forEach(function(r) {
+    dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: r.call_id, output: r.output } }))
+  })
   dc.send(JSON.stringify({ type: 'response.create' }))
 }
 
