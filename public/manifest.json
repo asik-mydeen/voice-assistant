@@ -1,16 +1,14 @@
 {
-  "name": "Zara Voice",
-  "short_name": "Zara",
+  "name": "Akisa Voice",
+  "short_name": "Akisa",
   "description": "Voice-first personal AI assistant",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#060610",
-  "theme_color": "#060610",
-  "icons": [
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='100' y2='100'><stop offset='0%25' stop-color='%236366f1'/><stop offset='100%25' stop-color='%23a855f7'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23g)'/><circle cx='35' cy='42' r='7' fill='white' opacity='0.9'/><circle cx='65' cy='42' r='7' fill='white' opacity='0.9'/><path d='M30 62 Q50 78 70 62' stroke='white' stroke-width='5' fill='none' stroke-linecap='round' opacity='0.8'/></svg>",
-      "sizes": "any",
-      "type": "image/svg+xml"
-    }
-  ]
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [{
+    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%99%EF%B8%8F%3C/text%3E%3C/svg%3E",
+    "sizes": "any",
+    "type": "image/svg+xml"
+  }]
 }
