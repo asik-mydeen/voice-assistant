@@ -23,42 +23,47 @@
       </button>
     </div>
 
-    <!-- Voice (Jarvis-style fullscreen) -->
+    <!-- Voice -->
     <div id="voice-screen" class="screen hidden">
-      <!-- Fullscreen orb background -->
       <div id="orb-scene" onclick="toggleConnection()">
         <div id="orb-glow"></div>
-        <div id="orb">
-          <div class="orb-layer orb-1"></div>
-          <div class="orb-layer orb-2"></div>
-          <div class="orb-layer orb-3"></div>
-          <div class="orb-layer orb-4"></div>
-        </div>
-        <div id="orb-ring-1"></div>
-        <div id="orb-ring-2"></div>
+        <div id="orb"><div class="orb-layer orb-1"></div><div class="orb-layer orb-2"></div><div class="orb-layer orb-3"></div><div class="orb-layer orb-4"></div></div>
+        <div id="orb-ring-1"></div><div id="orb-ring-2"></div>
       </div>
-
-      <!-- Top bar -->
       <div id="top-bar">
-        <div id="status-left">
-          <span id="status-text">Tap the orb to start</span>
-          <span id="speaker-badge" class="hidden"></span>
-        </div>
-        <div id="status-actions">
-          <button class="btn-icon" onclick="openSettings()">👤</button>
-          <button class="btn-icon" onclick="signOut()">⏻</button>
-        </div>
+        <div id="status-left"><span id="status-text">Tap the orb</span><span id="speaker-badge" class="hidden"></span></div>
+        <div id="status-actions"><button class="btn-icon" onclick="openSettings()">\uD83D\uDC64</button><button class="btn-icon" onclick="signOut()">\u23FB</button></div>
       </div>
-
-      <!-- Transcript overlay at bottom -->
       <div id="transcript-area"><div id="transcript"></div></div>
     </div>
 
     <!-- Settings -->
     <div id="settings-panel" class="overlay hidden">
-      <div class="panel"><div class="panel-header"><h2>Voice Profiles</h2><button class="btn-icon" onclick="closeSettings()">✕</button></div>
-      <p class="panel-desc">Enroll voice IDs so Akisa knows who's speaking.</p>
+      <div class="panel"><div class="panel-header"><h2>Voice Profiles</h2><button class="btn-icon" onclick="closeSettings()">\u2715</button></div>
+      <p class="panel-desc">Enroll voice IDs so Akisa knows who's speaking. Each person reads 4 short phrases.</p>
       <div id="family-list"></div></div>
+    </div>
+
+    <!-- Guided Enrollment -->
+    <div id="enroll-overlay" class="overlay hidden" style="align-items:center;">
+      <div class="panel enroll-guided-panel">
+        <div class="enroll-header">
+          <h2>Voice Enrollment</h2>
+          <button class="btn-icon" onclick="closeEnrollment()">\u2715</button>
+        </div>
+        <p class="enroll-for">Setting up voice for <strong id="enroll-member-name"></strong></p>
+
+        <div id="enroll-recording">
+          <p id="enroll-step" class="enroll-step">Step 1 of 4</p>
+          <p id="enroll-instruction" class="enroll-instruction">Read the highlighted phrase aloud</p>
+          <div id="enroll-phrases"></div>
+        </div>
+
+        <div id="enroll-done" class="hidden">
+          <p id="enroll-result" class="enroll-result"></p>
+          <button class="btn-primary" onclick="closeEnrollment()" style="margin-top:16px;">Done</button>
+        </div>
+      </div>
     </div>
 
     <!-- Text Input -->
@@ -66,14 +71,6 @@
       <div class="panel"><p id="text-input-prompt"></p>
       <input id="text-input-field" type="text" autocomplete="off" />
       <button class="btn-primary" onclick="submitTextInput()">Submit</button></div>
-    </div>
-
-    <!-- Enrollment -->
-    <div id="enroll-overlay" class="overlay hidden">
-      <div class="panel enroll-panel"><h2 id="enroll-title">Enrolling...</h2>
-      <div id="enroll-animation" class="enroll-anim">🎤</div>
-      <p id="enroll-status">Speak naturally for 8 seconds...</p>
-      <button class="btn-secondary" onclick="document.getElementById('enroll-overlay').classList.add('hidden')">Cancel</button></div>
     </div>
   </div>
 
