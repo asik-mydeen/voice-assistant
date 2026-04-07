@@ -8,23 +8,16 @@ var isConnected = false
 var pendingFunctionCalls = []
 var aiTranscriptBuffer = ''
 var currentSpeaker = null
-var voiceId = null
 var textInputResolve = null
-var enrollAborted = false
-var initDone = false
 var FAMILY = ['Asik', 'Nikkath', 'Aarish', 'Aaraa']
-
-try { voiceId = new VoiceID() } catch(e) { console.warn('VoiceID not available:', e) }
 
 function $(s) { return document.querySelector(s) }
 
 async function init() {
-  if (initDone) return
   try {
     var config = await fetch('/api/config').then(function(r) { return r.json() })
-    if (!config.supabaseUrl || !config.supabaseAnonKey) { showLoginScreen(); return }
+    if (!config.supabaseUrl || !config.supabaseAnonKey) return showLoginScreen()
     supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey)
-    initDone = true
     var result = await supabaseClient.auth.getSession()
     if (result.data.session) { session = result.data.session; showVoiceScreen() } else { showLoginScreen() }
     supabaseClient.auth.onAuthStateChange(function(ev, s) {
@@ -37,7 +30,7 @@ async function init() {
 
 async function signIn() {
   if (!supabaseClient) await init()
-  if (!supabaseClient) { alert('Unable to connect. Please refresh and try again.'); return }
+  if (!supabaseClient) { alert('Unable to connect. Please refresh.'); return }
   supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
 }
 function signOut() {
@@ -75,95 +68,24 @@ function addTranscript(role, text) {
   $('#transcript-area').scrollTop = $('#transcript-area').scrollHeight
 }
 
-function openSettings() {
-  renderFamilyList()
-  $('#settings-panel').classList.remove('hidden')
+// === SPEAKER SELECT ===
+function showSpeakerSelect() {
+  $('#speaker-select').classList.remove('hidden')
 }
-function closeSettings() { $('#settings-panel').classList.add('hidden') }
-
-function renderFamilyList() {
-  var list = $('#family-list')
-  list.innerHTML = ''
-  FAMILY.forEach(function(name) {
-    var enrolled = voiceId && voiceId.hasProfile(name)
-    var card = document.createElement('div')
-    card.className = 'family-card'
-    card.innerHTML = '<div class="fc-info"><span class="fc-name">' + name + '</span>' +
-      '<span class="fc-status ' + (enrolled ? 'enrolled' : '') + '">' + (enrolled ? '\u2713 Voice enrolled' : 'No voice profile') + '</span></div>' +
-      '<div class="fc-actions">' +
-      '<button class="btn-sm btn-enroll" data-name="' + name + '">' + (enrolled ? 'Re-enroll' : 'Enroll Voice') + '</button>' +
-      (enrolled ? '<button class="btn-sm btn-delete" data-name="' + name + '">\u2715</button>' : '') + '</div>'
-    list.appendChild(card)
-  })
-  list.querySelectorAll('.btn-enroll').forEach(function(btn) {
-    btn.addEventListener('click', function() { closeSettings(); startGuidedEnrollment(btn.dataset.name) })
-  })
-  list.querySelectorAll('.btn-delete').forEach(function(btn) {
-    btn.addEventListener('click', function() { voiceId.deleteProfile(btn.dataset.name); renderFamilyList() })
-  })
+function selectSpeaker(name) {
+  currentSpeaker = name
+  updateSpeakerBadge()
+  $('#speaker-select').classList.add('hidden')
+  connect()
+}
+function skipSpeaker() {
+  currentSpeaker = null
+  updateSpeakerBadge()
+  $('#speaker-select').classList.add('hidden')
+  connect()
 }
 
-async function startGuidedEnrollment(name) {
-  enrollAborted = false
-  var overlay = $('#enroll-overlay')
-  overlay.classList.remove('hidden')
-  var phrases = voiceId.getPhrases()
-  var html = '<div class="enroll-header"><h2>Voice Enrollment</h2><p class="enroll-name">' + name + '</p></div>' +
-    '<div class="enroll-progress"><div id="enroll-progress-bar"></div></div><div id="enroll-phrases">'
-  phrases.forEach(function(phrase, i) {
-    html += '<div class="enroll-phrase" id="phrase-' + i + '"><div class="ep-num">' + (i+1) + '</div><div class="ep-text">' + phrase + '</div><div class="ep-status">\u23F3</div></div>'
-  })
-  html += '</div><div id="enroll-level-container"><div id="enroll-level-bar"></div></div>' +
-    '<div id="enroll-instruction">Get ready...</div>' +
-    '<button class="btn-secondary" onclick="abortEnrollment()">Cancel</button>'
-  overlay.querySelector('.panel').innerHTML = html
-
-  try {
-    await voiceId.enrollGuided(name,
-      function(stepIdx, phrase, status) {
-        if (enrollAborted) return
-        var pct = status === 'done' ? ((stepIdx+1)/phrases.length*100) : (stepIdx/phrases.length*100)
-        var bar = document.getElementById('enroll-progress-bar')
-        if (bar) bar.style.width = pct + '%'
-        phrases.forEach(function(_, j) {
-          var el = document.getElementById('phrase-' + j)
-          if (!el) return
-          var st = el.querySelector('.ep-status')
-          if (j < stepIdx) { el.className = 'enroll-phrase done'; st.textContent = '\u2713' }
-          else if (j === stepIdx) {
-            if (status === 'ready') { el.className = 'enroll-phrase active'; st.textContent = '\uD83C\uDFA4' }
-            else if (status === 'recording') { el.className = 'enroll-phrase recording'; st.textContent = '\uD83D\uDD34' }
-            else if (status === 'done') { el.className = 'enroll-phrase done'; st.textContent = '\u2713' }
-          } else { el.className = 'enroll-phrase'; st.textContent = '\u23F3' }
-        })
-        var ins = document.getElementById('enroll-instruction')
-        if (ins) {
-          if (status === 'ready') ins.textContent = 'Get ready to read phrase ' + (stepIdx+1) + '...'
-          else if (status === 'recording') ins.textContent = '\uD83D\uDD34 Read the highlighted phrase aloud'
-          else if (status === 'done') ins.textContent = '\u2713 Great!'
-        }
-      },
-      function(level) {
-        var bar = document.getElementById('enroll-level-bar')
-        if (bar) bar.style.width = Math.max(3, level * 100) + '%'
-      }
-    )
-    if (!enrollAborted) {
-      var ins = document.getElementById('enroll-instruction')
-      if (ins) ins.innerHTML = '\u2705 <strong>Voice profile saved for ' + name + '!</strong>'
-      var bar = document.getElementById('enroll-progress-bar')
-      if (bar) bar.style.width = '100%'
-      setTimeout(function() { overlay.classList.add('hidden') }, 2000)
-    }
-  } catch(e) {
-    if (!enrollAborted) {
-      var ins = document.getElementById('enroll-instruction')
-      if (ins) ins.textContent = '\u274C ' + e.message
-    }
-  }
-}
-function abortEnrollment() { enrollAborted = true; $('#enroll-overlay').classList.add('hidden') }
-
+// === TEXT INPUT ===
 function showTextInput(prompt, type) {
   $('#text-input-prompt').textContent = prompt || 'Enter value:'
   var field = $('#text-input-field'); field.type = type || 'text'; field.value = ''
@@ -176,17 +98,14 @@ function submitTextInput() {
   if (textInputResolve) { textInputResolve(val); textInputResolve = null }
 }
 
-function toggleConnection() { if (isConnected) disconnect(); else connect() }
+// === WEBRTC ===
+function toggleConnection() {
+  if (isConnected) { disconnect() } else { showSpeakerSelect() }
+}
 
 async function connect() {
   try {
-    var hasProfiles = voiceId && voiceId.getEnrolledNames().length > 0
-    if (hasProfiles) {
-      setStatus('Identifying...', 'connecting')
-      var match = await voiceId.identify(2500)
-      if (match) { currentSpeaker = match.name; updateSpeakerBadge(); setStatus('Hi ' + match.name + '!', 'connecting') }
-      else { currentSpeaker = null; updateSpeakerBadge(); setStatus('Connecting...', 'connecting') }
-    } else { setStatus('Connecting...', 'connecting') }
+    setStatus(currentSpeaker ? 'Hi ' + currentSpeaker + '! Connecting...' : 'Connecting...', 'connecting')
 
     var tokenRes = await fetch('/api/session', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } })
     if (!tokenRes.ok) { var err = await tokenRes.json(); throw new Error(err.error || 'Session failed') }
@@ -198,7 +117,9 @@ async function connect() {
     dc = pc.createDataChannel('oai-events')
     dc.onopen = function() {
       isConnected = true; setStatus('Listening...', 'listening')
-      if (currentSpeaker) dc.send(JSON.stringify({ type: 'session.update', session: { instructions: 'The current speaker is ' + currentSpeaker + '. Address them by name and personalize responses.' } }))
+      if (currentSpeaker) {
+        dc.send(JSON.stringify({ type: 'session.update', session: { instructions: 'The current speaker is ' + currentSpeaker + '. Address them by name and personalize responses for this family member.' } }))
+      }
     }
     dc.onclose = function() { disconnect() }
     dc.onmessage = handleRealtimeEvent

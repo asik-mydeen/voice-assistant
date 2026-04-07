@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#060610">
   <title>Akisa</title>
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/styles.css?v=2">
+  <link rel="stylesheet" href="/styles.css?v=3">
 </head>
 <body data-state="idle">
   <div id="app">
@@ -28,21 +28,39 @@
       <div id="top-bar">
         <div id="status-left"><span id="status-text">Tap the orb</span><span id="speaker-badge" class="hidden"></span></div>
         <div id="status-actions">
-          <button class="btn-icon" onclick="openSettings()">👤</button>
           <button class="btn-icon" onclick="signOut()">⏻</button>
         </div>
       </div>
       <div id="transcript-area"><div id="transcript"></div></div>
     </div>
 
-    <div id="settings-panel" class="overlay hidden">
-      <div class="panel"><div class="panel-header"><h2>Voice Profiles</h2><button class="btn-icon" onclick="closeSettings()">✕</button></div>
-      <p class="panel-desc">Enroll voice IDs so Akisa recognizes who's speaking.</p>
-      <div id="family-list"></div></div>
+    <!-- Speaker Select -->
+    <div id="speaker-select" class="overlay hidden">
+      <div class="speaker-panel">
+        <p class="speaker-title">Who's speaking?</p>
+        <div class="speaker-grid">
+          <button class="speaker-btn" onclick="selectSpeaker('Asik')">
+            <span class="speaker-avatar">👨</span>
+            <span class="speaker-name">Asik</span>
+          </button>
+          <button class="speaker-btn" onclick="selectSpeaker('Nikkath')">
+            <span class="speaker-avatar">👩</span>
+            <span class="speaker-name">Nikkath</span>
+          </button>
+          <button class="speaker-btn" onclick="selectSpeaker('Aarish')">
+            <span class="speaker-avatar">👦</span>
+            <span class="speaker-name">Aarish</span>
+          </button>
+          <button class="speaker-btn" onclick="selectSpeaker('Aaraa')">
+            <span class="speaker-avatar">👧</span>
+            <span class="speaker-name">Aaraa</span>
+          </button>
+        </div>
+        <button class="speaker-skip" onclick="skipSpeaker()">Continue as guest</button>
+      </div>
     </div>
 
-    <div id="enroll-overlay" class="overlay hidden"><div class="panel enroll-panel"></div></div>
-
+    <!-- Text Input -->
     <div id="text-input-overlay" class="overlay hidden">
       <div class="panel"><p id="text-input-prompt"></p>
       <input id="text-input-field" type="text" autocomplete="off" />
@@ -50,7 +68,6 @@
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="/voiceid.js?v=2"></script>
-  <script src="/app.js?v=2"></script>
+  <script src="/app.js?v=3"></script>
 </body>
 </html>

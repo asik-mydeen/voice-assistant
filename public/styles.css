@@ -79,57 +79,39 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 [data-state="speaking"] .orb-layer { filter: blur(1px); animation-duration: 2.5s; }
 [data-state="error"] { --orb-1:#dc2626;--orb-2:#ef4444;--orb-3:#f87171;--orb-4:#b91c1c;--orb-glow:rgba(220,38,38,0.2);--orb-size:140px;--orb-speed:8s; }
 
-/* OVERLAYS */
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s ease; }
+/* SPEAKER SELECT */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
 @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+
+.speaker-panel { text-align: center; padding: 32px 24px; width: 100%; max-width: 360px; }
+.speaker-title { font-size: 22px; font-weight: 700; margin-bottom: 28px; color: var(--text); }
+.speaker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.speaker-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 20px 16px; background: var(--surface); border: 2px solid transparent;
+  border-radius: 16px; cursor: pointer; transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.speaker-btn:hover { border-color: var(--accent); background: rgba(99,102,241,0.08); }
+.speaker-btn:active { transform: scale(0.95); border-color: var(--accent); }
+.speaker-avatar { font-size: 36px; }
+.speaker-name { font-size: 16px; font-weight: 600; color: var(--text); }
+.speaker-skip {
+  background: none; border: none; color: var(--text-dim); font-size: 14px;
+  cursor: pointer; padding: 12px; width: 100%;
+}
+.speaker-skip:active { color: var(--text); }
+
+/* PANELS */
 .panel { background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px; width: 100%; max-width: 480px; max-height: 85dvh; overflow-y: auto; }
-.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.panel-header h2 { font-size: 20px; font-weight: 700; }
-.panel-desc { color: var(--text-dim); font-size: 13px; margin-bottom: 16px; }
-.family-card { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--surface-2); border-radius: 12px; margin-bottom: 8px; }
-.fc-info { display: flex; flex-direction: column; gap: 2px; }
-.fc-name { font-size: 16px; font-weight: 600; }
-.fc-status { font-size: 12px; color: var(--text-dim); }
-.fc-status.enrolled { color: var(--success); }
-.fc-actions { display: flex; gap: 6px; }
-.btn-sm { padding: 8px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; min-height: 36px; }
-.btn-sm:active { transform: scale(.95); }
-.btn-enroll { background: var(--accent); color: white; }
-.btn-delete { background: var(--surface); color: var(--error); }
-
-/* GUIDED ENROLLMENT */
-.enroll-panel { padding: 28px 24px; }
-.enroll-header { text-align: center; margin-bottom: 20px; }
-.enroll-header h2 { font-size: 22px; margin-bottom: 4px; }
-.enroll-name { color: var(--accent); font-size: 18px; font-weight: 600; }
-.enroll-progress { height: 4px; background: var(--surface-2); border-radius: 2px; margin-bottom: 24px; overflow: hidden; }
-#enroll-progress-bar { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
-
-.enroll-phrase { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface-2); border-radius: 12px; margin-bottom: 8px; border: 2px solid transparent; transition: all 0.3s ease; opacity: 0.5; }
-.enroll-phrase.active { border-color: var(--accent); opacity: 1; background: rgba(99,102,241,0.08); }
-.enroll-phrase.recording { border-color: var(--error); opacity: 1; background: rgba(239,68,68,0.08); animation: recPulse 1s ease-in-out infinite; }
-.enroll-phrase.done { border-color: var(--success); opacity: 0.7; }
-@keyframes recPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.2)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }
-
-.ep-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; color: var(--text-dim); }
-.enroll-phrase.active .ep-num { background: var(--accent); color: white; }
-.enroll-phrase.recording .ep-num { background: var(--error); color: white; }
-.enroll-phrase.done .ep-num { background: var(--success); color: white; }
-.ep-text { flex: 1; font-size: 15px; line-height: 1.4; }
-.enroll-phrase.recording .ep-text { font-weight: 600; }
-.ep-status { font-size: 16px; flex-shrink: 0; }
-
-#enroll-level-container { height: 6px; background: var(--surface-2); border-radius: 3px; margin: 16px 0; overflow: hidden; }
-#enroll-level-bar { height: 100%; width: 3%; background: linear-gradient(90deg, var(--accent), var(--success)); border-radius: 3px; transition: width 0.08s ease; }
-#enroll-instruction { text-align: center; font-size: 15px; color: var(--text-dim); margin: 16px 0; min-height: 24px; }
-
+#text-input-overlay { align-items: flex-end; }
 #text-input-overlay .panel { text-align: center; padding: 32px 24px; }
 #text-input-prompt { font-size: 16px; margin-bottom: 16px; }
 #text-input-field { width: 100%; padding: 12px 16px; background: var(--surface-2); border: 1px solid var(--text-dim); border-radius: 10px; color: var(--text); font-size: 16px; margin-bottom: 12px; outline: none; -webkit-user-select: text; user-select: text; }
 #text-input-field:focus { border-color: var(--accent); }
 .btn-primary { padding: 12px 32px; background: var(--accent); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
 .btn-primary:active { transform: scale(.95); }
-.btn-secondary { padding: 10px 24px; background: var(--surface-2); color: var(--text-dim); border: none; border-radius: 10px; font-size: 14px; cursor: pointer; }
+
 #transcript-area::-webkit-scrollbar { width: 3px; }
 #transcript-area::-webkit-scrollbar-track { background: transparent; }
 #transcript-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
