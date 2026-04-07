@@ -27,7 +27,11 @@
     <div id="voice-screen" class="screen hidden">
       <div id="status-bar">
         <span id="status-text">Ready</span>
-        <button id="logout-btn" class="btn-icon" title="Sign out">⏻</button>
+        <span id="speaker-badge" class="hidden"></span>
+        <div id="status-actions">
+          <button id="settings-btn" class="btn-icon" title="Voice Profiles">👤</button>
+          <button id="logout-btn" class="btn-icon" title="Sign out">⏻</button>
+        </div>
       </div>
       <div id="transcript-area"><div id="transcript"></div></div>
       <div id="mic-container">
@@ -39,9 +43,41 @@
       </div>
       <p id="mic-hint">Tap to start talking</p>
     </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="overlay hidden">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Voice Profiles</h2>
+          <button id="settings-close" class="btn-icon">✕</button>
+        </div>
+        <p class="panel-desc">Enroll voice IDs so Akisa knows who's speaking.</p>
+        <div id="family-list"></div>
+      </div>
+    </div>
+
+    <!-- Text Input Overlay -->
+    <div id="text-input-overlay" class="overlay hidden">
+      <div class="panel">
+        <p id="text-input-prompt"></p>
+        <input id="text-input-field" type="text" autocomplete="off" />
+        <button id="text-input-submit" class="btn-primary">Submit</button>
+      </div>
+    </div>
+
+    <!-- Enrollment Overlay -->
+    <div id="enroll-overlay" class="overlay hidden">
+      <div class="panel enroll-panel">
+        <h2 id="enroll-title">Enrolling...</h2>
+        <div id="enroll-animation" class="enroll-anim">🎤</div>
+        <p id="enroll-status">Speak naturally for 8 seconds...</p>
+        <button id="enroll-cancel" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/voiceid.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

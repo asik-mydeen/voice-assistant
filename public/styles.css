@@ -32,9 +32,14 @@ body {
 #voice-screen { justify-content: flex-start; padding: 0; }
 #status-bar {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; padding-top: max(16px, env(safe-area-inset-top));
+  padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top));
 }
 #status-text { font-size: 14px; color: var(--text-dim); font-weight: 500; }
+#speaker-badge {
+  background: var(--accent); color: white; padding: 2px 10px; border-radius: 12px;
+  font-size: 12px; font-weight: 600;
+}
+#status-actions { display: flex; gap: 4px; }
 .btn-icon {
   background: none; border: none; color: var(--text-dim);
   font-size: 18px; cursor: pointer; padding: 8px; border-radius: 8px;
@@ -80,6 +85,65 @@ body {
 [data-state="error"] .mic-button { background: var(--error); }
 @keyframes pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2); opacity: 0; } }
 @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+/* Overlays */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100;
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+.panel {
+  background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px;
+  width: 100%; max-width: 480px; max-height: 80dvh; overflow-y: auto;
+}
+.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.panel-header h2 { font-size: 20px; font-weight: 700; }
+.panel-desc { color: var(--text-dim); font-size: 13px; margin-bottom: 16px; }
+
+/* Family Cards */
+.family-card {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px; background: var(--surface-2); border-radius: 12px; margin-bottom: 8px;
+}
+.fc-info { display: flex; flex-direction: column; gap: 2px; }
+.fc-name { font-size: 16px; font-weight: 600; }
+.fc-status { font-size: 12px; color: var(--text-dim); }
+.fc-status.enrolled { color: var(--success); }
+.fc-actions { display: flex; gap: 6px; }
+.btn-sm {
+  padding: 6px 14px; border: none; border-radius: 8px; font-size: 13px;
+  font-weight: 500; cursor: pointer; transition: transform 0.1s;
+}
+.btn-sm:active { transform: scale(0.95); }
+.btn-enroll { background: var(--accent); color: white; }
+.btn-delete { background: var(--surface); color: var(--error); }
+
+/* Enrollment */
+.enroll-panel { text-align: center; padding: 32px 24px; }
+.enroll-panel h2 { margin-bottom: 16px; }
+.enroll-anim { font-size: 48px; margin: 16px 0; }
+.enroll-anim.recording { animation: breathe 0.8s ease-in-out infinite; }
+#enroll-status { color: var(--text-dim); font-size: 14px; margin-bottom: 20px; }
+
+/* Text Input */
+#text-input-overlay .panel { text-align: center; padding: 32px 24px; }
+#text-input-prompt { font-size: 16px; margin-bottom: 16px; }
+#text-input-field {
+  width: 100%; padding: 12px 16px; background: var(--surface-2); border: 1px solid var(--text-dim);
+  border-radius: 10px; color: var(--text); font-size: 16px; margin-bottom: 12px;
+  outline: none; -webkit-user-select: text; user-select: text;
+}
+#text-input-field:focus { border-color: var(--accent); }
+.btn-primary {
+  padding: 12px 32px; background: var(--accent); color: white; border: none;
+  border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;
+  transition: transform 0.1s;
+}
+.btn-primary:active { transform: scale(0.95); }
+.btn-secondary {
+  padding: 10px 24px; background: var(--surface-2); color: var(--text-dim); border: none;
+  border-radius: 10px; font-size: 14px; cursor: pointer;
+}
 
 /* Scrollbar */
 #transcript-area::-webkit-scrollbar { width: 4px; }
