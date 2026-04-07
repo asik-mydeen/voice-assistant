@@ -1,6 +1,7 @@
-const MEMORY_URL = process.env.MEMORY_MCP_URL || 'https://memory.asikmydeen.com'
-const LIFE_URL = process.env.LIFE_MCP_URL || 'https://life.asikmydeen.com'
-const MCP_TOKEN = process.env.MCP_AUTH_TOKEN || ''
+const MEMORY_MCP_URL = process.env.MEMORY_MCP_URL || 'https://memory.asikmydeen.com'
+const LIFE_MCP_URL = process.env.LIFE_MCP_URL || 'https://life.asikmydeen.com'
+const MEMORY_MCP_TOKEN = process.env.MEMORY_MCP_TOKEN || process.env.MCP_AUTH_TOKEN || ''
+const LIFE_MCP_TOKEN = process.env.LIFE_MCP_TOKEN || process.env.MCP_AUTH_TOKEN || ''
 
 const LIFE_TOOLS = new Set([
   'context_now', 'context_member',
@@ -10,7 +11,7 @@ const LIFE_TOOLS = new Set([
   'voice_transcribe', 'voice_quick',
   'family_my_chores', 'family_done', 'family_my_points',
   'family_mood', 'family_whats_for_dinner', 'family_scoreboard',
-  'sync_status', 'sync_export_memories',
+  'sync_status', 'sync_export_memories', 'sync_import_memory', 'sync_export_events',
 ])
 
 class McpSession {
@@ -25,13 +26,13 @@ class McpSession {
   }
 
   private async post(body: any): Promise<Response> {
-    const h: Record<string, string> = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${this.token}`,
       'Accept': 'application/json, text/event-stream',
     }
-    if (this.sessionId) h['Mcp-Session-Id'] = this.sessionId
-    return fetch(`${this.baseUrl}/mcp`, { method: 'POST', headers: h, body: JSON.stringify(body) })
+    if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId
+    return fetch(`${this.baseUrl}/mcp`, { method: 'POST', headers, body: JSON.stringify(body) })
   }
 
   private async parseResponse(res: Response): Promise<any> {
@@ -41,12 +42,12 @@ class McpSession {
       for (const line of text.split('\n')) {
         if (line.startsWith('data: ')) {
           try {
-            const d = JSON.parse(line.slice(6))
-            if (d.result !== undefined || d.error !== undefined) return d
+            const data = JSON.parse(line.slice(6))
+            if (data.result !== undefined || data.error !== undefined) return data
           } catch {}
         }
       }
-      return { error: { message: 'No JSON-RPC response in SSE' } }
+      throw new Error('No valid JSON-RPC response in SSE stream')
     }
     return res.json()
   }
@@ -79,7 +80,7 @@ class McpSession {
         params: { name, arguments: args },
         id: 'call-' + Date.now(),
       })
-      if (!res.ok) throw new Error('MCP HTTP ' + res.status)
+      if (!res.ok) throw new Error(`MCP error: ${res.status}`)
       return this.parseResponse(res)
     } catch (e) {
       this.initialized = false
@@ -96,23 +97,20 @@ class McpSession {
   }
 }
 
-const memorySess = new McpSession(MEMORY_URL, MCP_TOKEN)
-const lifeSess = new McpSession(LIFE_URL, MCP_TOKEN)
+const memorySession = new McpSession(MEMORY_MCP_URL, MEMORY_MCP_TOKEN)
+const lifeSession = new McpSession(LIFE_MCP_URL, LIFE_MCP_TOKEN)
 
-export async function executeTool(name: string, args: Record<string, any>): Promise<string> {
-  const session = LIFE_TOOLS.has(name) ? lifeSess : memorySess
-  const response = await session.callTool(name, args)
-
-  if (response.error) {
-    return JSON.stringify({ error: response.error.message || 'MCP error' })
+export async function executeTool(name: string, args: Record<string, any>): Promise<any> {
+  const session = LIFE_TOOLS.has(name) ? lifeSession : memorySession
+  try {
+    const response = await session.callTool(name, args)
+    if (response.error) return { error: response.error.message || 'MCP tool error' }
+    const result = response.result
+    if (result?.content) {
+      return result.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n')
+    }
+    return result
+  } catch (e: any) {
+    return { error: e.message }
   }
-
-  const result = response.result
-  if (result?.content) {
-    return result.content
-      .filter((c: any) => c.type === 'text')
-      .map((c: any) => c.text)
-      .join('\n')
-  }
-  return JSON.stringify(result)
 }
