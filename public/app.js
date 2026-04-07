@@ -62,30 +62,25 @@ function updateSpeakerBadge() {
 function addTranscript(role, text) {
   var el = document.createElement('div')
   el.className = 'msg ' + role
-  var icon = role === 'user' ? '\uD83C\uDFA4' : '\uD83E\uDD16'
-  el.innerHTML = '<span class="msg-role">' + icon + '</span><span class="msg-text">' + text + '</span>'
+  if (role === 'user') {
+    el.innerHTML = '<span class="msg-role">\uD83C\uDFA4</span><span class="msg-text">' + text + '</span>'
+  } else {
+    el.innerHTML = '<span class="msg-role"><span class="zara-avatar"><svg viewBox="0 0 32 32" width="22" height="22"><circle cx="16" cy="16" r="16" fill="url(#zg)"/><circle cx="11" cy="14" r="2.5" fill="white" opacity="0.9"/><circle cx="21" cy="14" r="2.5" fill="white" opacity="0.9"/><path d="M10 20 Q16 25 22 20" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/><defs><linearGradient id="zg" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs></svg></span></span><span class="msg-text">' + text + '</span>'
+  }
   $('#transcript').appendChild(el)
   $('#transcript-area').scrollTop = $('#transcript-area').scrollHeight
 }
 
-// === SPEAKER SELECT ===
-function showSpeakerSelect() {
-  $('#speaker-select').classList.remove('hidden')
-}
+function showSpeakerSelect() { $('#speaker-select').classList.remove('hidden') }
 function selectSpeaker(name) {
-  currentSpeaker = name
-  updateSpeakerBadge()
-  $('#speaker-select').classList.add('hidden')
-  connect()
+  currentSpeaker = name; updateSpeakerBadge()
+  $('#speaker-select').classList.add('hidden'); connect()
 }
 function skipSpeaker() {
-  currentSpeaker = null
-  updateSpeakerBadge()
-  $('#speaker-select').classList.add('hidden')
-  connect()
+  currentSpeaker = null; updateSpeakerBadge()
+  $('#speaker-select').classList.add('hidden'); connect()
 }
 
-// === TEXT INPUT ===
 function showTextInput(prompt, type) {
   $('#text-input-prompt').textContent = prompt || 'Enter value:'
   var field = $('#text-input-field'); field.type = type || 'text'; field.value = ''
@@ -98,28 +93,21 @@ function submitTextInput() {
   if (textInputResolve) { textInputResolve(val); textInputResolve = null }
 }
 
-// === WEBRTC ===
-function toggleConnection() {
-  if (isConnected) { disconnect() } else { showSpeakerSelect() }
-}
+function toggleConnection() { if (isConnected) disconnect(); else showSpeakerSelect() }
 
 async function connect() {
   try {
     setStatus(currentSpeaker ? 'Hi ' + currentSpeaker + '! Connecting...' : 'Connecting...', 'connecting')
-
     var tokenRes = await fetch('/api/session', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } })
     if (!tokenRes.ok) { var err = await tokenRes.json(); throw new Error(err.error || 'Session failed') }
     var sd = await tokenRes.json()
-
     pc = new RTCPeerConnection()
     audioEl = document.createElement('audio'); audioEl.autoplay = true
     pc.ontrack = function(e) { audioEl.srcObject = e.streams[0] }
     dc = pc.createDataChannel('oai-events')
     dc.onopen = function() {
       isConnected = true; setStatus('Listening...', 'listening')
-      if (currentSpeaker) {
-        dc.send(JSON.stringify({ type: 'session.update', session: { instructions: 'The current speaker is ' + currentSpeaker + '. Address them by name and personalize responses for this family member.' } }))
-      }
+      if (currentSpeaker) dc.send(JSON.stringify({ type: 'session.update', session: { instructions: 'The current speaker is ' + currentSpeaker + '. Address them by name and personalize responses for this family member.' } }))
     }
     dc.onclose = function() { disconnect() }
     dc.onmessage = handleRealtimeEvent
