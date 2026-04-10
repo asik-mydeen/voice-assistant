@@ -70,4 +70,9 @@ export const FUNCTIONS = [
   f('ship_compose_update', 'Update compose file, env vars, or pre-deploy command', { properties: { name: s('Project name'), compose_file: s(), env_vars: { type: 'object', additionalProperties: { type: 'string' } }, command: s('Pre-deploy command') }, required: ['name'] }),
   f('ship_compose_status', 'Get compose project status and deployment history', { properties: { name: s('Project name') }, required: ['name'] }),
   f('ship_tunnel_set', 'Set Cloudflare tunnel routing for a subdomain to specific port', { properties: { subdomain: s('Subdomain'), port: n('Port number') }, required: ['subdomain', 'port'] }),
+  // Taskrunner
+  f('ship_task_submit', 'Submit a feature or bug fix task to be built autonomously', { properties: { project: s('GitHub repo name'), description: s('What to build/fix'), engine: e(['gsd', 'claude-code']), priority: e(['normal', 'urgent']) }, required: ['project', 'description'] }),
+  f('ship_task_status', 'Check status of autonomous dev tasks', { properties: { id: s('Task ID, omit for all') } }),
+  f('ship_task_followup', 'Send follow-up instructions to a running task', { properties: { id: s('Task ID'), message: s('Follow-up instruction') }, required: ['id', 'message'] }),
+  f('ship_task_cancel', 'Cancel a task and cleanup', { properties: { id: s('Task ID') }, required: ['id'] }),
 ]
