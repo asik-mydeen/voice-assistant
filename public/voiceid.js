@@ -4,7 +4,7 @@ var VoiceID = (function() {
   var THRESHOLD = 0.78;
   var SILENCE_THRESHOLD = -100;
   var PHRASES = [
-    'Hey Akisa, what\'s happening today?',
+    'Hey Zara, what\'s happening today?',
     'Remind me to pick up groceries at five pm',
     'Turn off the lights in the living room please',
     'What\'s the weather going to be like tomorrow?',
