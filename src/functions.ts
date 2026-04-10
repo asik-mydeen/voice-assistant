@@ -51,4 +51,13 @@ export const FUNCTIONS = [
   f('family_scoreboard', 'Points leaderboard', { properties: {} }),
   f('shortcut_morning', 'Morning routine', { properties: {} }),
   f('shortcut_goodnight', 'Goodnight routine', { properties: { journal_note: s() } }),
+  // Ship MCP - Infrastructure
+  f('ship_list_projects', 'List all deployed projects and their status', { properties: {} }),
+  f('ship_status', 'Check if a deployed app is live', { properties: { name: s('Project name') }, required: ['name'] }),
+  f('ship_deploy', 'Redeploy a project', { properties: { name: s('Project name') }, required: ['name'] }),
+  f('ship_app_health', 'Deep health check for a deployed app', { properties: { name: s('Project name') }, required: ['name'] }),
+  f('ship_logs', 'Get deployment history', { properties: { name: s('Project name') }, required: ['name'] }),
+  f('ship_env_set', 'Update environment variables', { properties: { name: s('Project name'), env_vars: { type: 'object', additionalProperties: { type: 'string' } } }, required: ['name', 'env_vars'] }),
+  f('ship_compose_status', 'Get compose project status', { properties: { name: s('Project name') }, required: ['name'] }),
+  f('ship_tunnel_set', 'Set Cloudflare tunnel routing for a subdomain', { properties: { subdomain: s('Subdomain'), port: n('Port number') }, required: ['subdomain', 'port'] }),
 ]

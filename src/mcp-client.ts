@@ -1,7 +1,9 @@
 const MEMORY_MCP_URL = process.env.MEMORY_MCP_URL || 'https://memory.asikmydeen.com'
 const LIFE_MCP_URL = process.env.LIFE_MCP_URL || 'https://life.asikmydeen.com'
+const SHIP_MCP_URL = process.env.SHIP_MCP_URL || 'https://mcp.asikmydeen.com'
 const MEMORY_MCP_TOKEN = process.env.MEMORY_MCP_TOKEN || process.env.MCP_AUTH_TOKEN || ''
 const LIFE_MCP_TOKEN = process.env.LIFE_MCP_TOKEN || process.env.MCP_AUTH_TOKEN || ''
+const SHIP_MCP_TOKEN = process.env.SHIP_MCP_TOKEN || ''
 
 const LIFE_TOOLS = new Set([
   'context_now', 'context_member',
@@ -12,6 +14,14 @@ const LIFE_TOOLS = new Set([
   'family_my_chores', 'family_done', 'family_my_points',
   'family_mood', 'family_whats_for_dinner', 'family_scoreboard',
   'sync_status', 'sync_export_memories', 'sync_import_memory', 'sync_export_events',
+])
+
+const SHIP_TOOLS = new Set([
+  'ship_list_projects', 'ship_status', 'ship_deploy', 'ship_destroy',
+  'ship_env_set', 'ship_logs', 'ship_deploy_existing', 'ship_add_domain',
+  'ship_deploy_watch', 'ship_app_health', 'ship_deploy_compose',
+  'ship_compose_update', 'ship_compose_status', 'ship_tunnel_set',
+  'ship_create_project', 'ship_push_files', 'ship_supabase_query', 'ship_supabase_health',
 ])
 
 class McpSession {
@@ -99,9 +109,10 @@ class McpSession {
 
 const memorySession = new McpSession(MEMORY_MCP_URL, MEMORY_MCP_TOKEN)
 const lifeSession = new McpSession(LIFE_MCP_URL, LIFE_MCP_TOKEN)
+const shipSession = new McpSession(SHIP_MCP_URL, SHIP_MCP_TOKEN)
 
 export async function executeTool(name: string, args: Record<string, any>): Promise<any> {
-  const session = LIFE_TOOLS.has(name) ? lifeSession : memorySession
+  const session = SHIP_TOOLS.has(name) ? shipSession : LIFE_TOOLS.has(name) ? lifeSession : memorySession
   try {
     const response = await session.callTool(name, args)
     if (response.error) return { error: response.error.message || 'MCP tool error' }
