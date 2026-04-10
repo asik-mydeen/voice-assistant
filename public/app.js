@@ -1,19 +1,19 @@
 const $ = (s) => document.querySelector(s)
-let supabase = null, session = null, pc = null, dc = null, audioEl = null
+let sbClient = null, session = null, pc = null, dc = null, audioEl = null
 let isConnected = false, pendingCalls = [], aiTranscript = ''
 
 async function init() {
   const config = await fetch('/api/config').then(r => r.json())
-  supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey)
-  const { data: { session: s } } = await supabase.auth.getSession()
+  sbClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey)
+  const { data: { session: s } } = await sbClient.auth.getSession()
   if (s) { session = s; showVoice() } else { showLogin() }
-  supabase.auth.onAuthStateChange((ev, s) => {
+  sbClient.auth.onAuthStateChange((ev, s) => {
     session = s
     if (ev === 'SIGNED_IN') showVoice()
     if (ev === 'SIGNED_OUT') showLogin()
   })
-  $('#login-btn').onclick = () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin } })
-  $('#logout-btn').onclick = async () => { await disconnect(); await supabase.auth.signOut(); session = null; showLogin() }
+  $('#login-btn').onclick = () => sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin } })
+  $('#logout-btn').onclick = async () => { await disconnect(); await sbClient.auth.signOut(); session = null; showLogin() }
   $('#mic-btn').onclick = () => isConnected ? disconnect() : connect()
 }
 
