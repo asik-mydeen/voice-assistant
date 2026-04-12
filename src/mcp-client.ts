@@ -23,6 +23,7 @@ const SHIP_TOOLS = new Set([
   'ship_compose_update', 'ship_compose_status', 'ship_tunnel_set',
   'ship_create_project', 'ship_push_files', 'ship_supabase_query', 'ship_supabase_health',
   'ship_task_submit', 'ship_task_status', 'ship_task_followup', 'ship_task_cancel',
+  'ship_deployment_check', 'ship_task_list',
 ])
 
 class McpSession {

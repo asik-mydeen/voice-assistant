@@ -51,7 +51,7 @@ export const FUNCTIONS = [
   f('family_scoreboard', 'Points leaderboard', { properties: {} }),
   f('shortcut_morning', 'Morning routine', { properties: {} }),
   f('shortcut_goodnight', 'Goodnight routine', { properties: { journal_note: s() } }),
-  // Ship MCP - Infrastructure (all 18 tools)
+  // Ship MCP - Infrastructure
   f('ship_create_project', 'Create new project: scaffold, GitHub, Dokploy, DNS, auto-deploy', { properties: { name: s('Project name'), description: s(), type: e(['node','python','rust']), framework: e(['nextjs','hono','fastify','elysia','express','fastapi','flask','axum']), port: n(), subdomain: s(), supabase: b(), private_repo: b() }, required: ['name'] }),
   f('ship_list_projects', 'List all deployed projects and their status', { properties: {} }),
   f('ship_status', 'Check if a deployed app is live', { properties: { name: s('Project name') }, required: ['name'] }),
@@ -70,9 +70,11 @@ export const FUNCTIONS = [
   f('ship_compose_update', 'Update compose file, env vars, or pre-deploy command', { properties: { name: s('Project name'), compose_file: s(), env_vars: { type: 'object', additionalProperties: { type: 'string' } }, command: s('Pre-deploy command') }, required: ['name'] }),
   f('ship_compose_status', 'Get compose project status and deployment history', { properties: { name: s('Project name') }, required: ['name'] }),
   f('ship_tunnel_set', 'Set Cloudflare tunnel routing for a subdomain to specific port', { properties: { subdomain: s('Subdomain'), port: n('Port number') }, required: ['subdomain', 'port'] }),
+  f('ship_deployment_check', 'Check latest deployment status for a project — build status, duration, commit, errors', { properties: { name: s('Project name'), limit: n('Number of recent deployments to show') }, required: ['name'] }),
   // Taskrunner
   f('ship_task_submit', 'Submit a feature or bug fix task to be built autonomously', { properties: { project: s('GitHub repo name'), description: s('What to build/fix'), engine: e(['gsd', 'claude-code']), priority: e(['normal', 'urgent']) }, required: ['project', 'description'] }),
   f('ship_task_status', 'Check status of autonomous dev tasks', { properties: { id: s('Task ID, omit for all') } }),
   f('ship_task_followup', 'Send follow-up instructions to a running task', { properties: { id: s('Task ID'), message: s('Follow-up instruction') }, required: ['id', 'message'] }),
   f('ship_task_cancel', 'Cancel a task and cleanup', { properties: { id: s('Task ID') }, required: ['id'] }),
+  f('ship_task_list', 'List recent taskrunner tasks — status, engine, project, PR URL', { properties: { project: s('Filter by project name'), status: e(['queued','running','pushed','failed','cleaned']), limit: n('Number of tasks to show') } }),
 ]
