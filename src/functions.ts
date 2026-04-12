@@ -77,4 +77,15 @@ export const FUNCTIONS = [
   f('ship_task_followup', 'Send follow-up instructions to a running task', { properties: { id: s('Task ID'), message: s('Follow-up instruction') }, required: ['id', 'message'] }),
   f('ship_task_cancel', 'Cancel a task and cleanup', { properties: { id: s('Task ID') }, required: ['id'] }),
   f('ship_task_list', 'List recent taskrunner tasks — status, engine, project, PR URL', { properties: { project: s('Filter by project name'), status: e(['queued','running','pushed','failed','cleaned']), limit: n('Number of tasks to show') } }),
+  // Agent MCP - Crews, Research, Tutor, Career
+  f('research', 'Deep research any topic. Returns job_id — call agent_status for results when ready.', { properties: { query: s('Research topic or question') }, required: ['query'] }),
+  f('decide', 'AI decision support for comparing options. Use for "should I use X or Y" questions.', { properties: { question: s(), options: a() }, required: ['question'] }),
+  f('plan', 'Generate a prioritized daily plan using family calendar and task context.', { properties: { goal: s('Optional planning goal or focus') } }),
+  f('agent_status', 'Check status and output of an agent job (research, crew, pipeline).', { properties: { job_id: s('Job ID from a previous agent call') }, required: ['job_id'] }),
+  f('crew_feature', 'Run AI coding crew (Architect+Developer+Reviewer) to implement a feature. For complex code tasks.', { properties: { project: s('GitHub repo name (e.g. famcal)'), task: s('What feature to build') }, required: ['project', 'task'] }),
+  f('crew_audit', 'Run full code audit on a project — security, performance, and quality analysis.', { properties: { project: s('GitHub repo name') }, required: ['project'] }),
+  f('tutor_solve', 'Step-by-step problem solving and explanation for any complex problem.', { properties: { problem: s('Problem to solve or explain') }, required: ['problem'] }),
+  f('tutor_quiz', 'Generate quiz questions to test knowledge on a topic.', { properties: { topic: s('Topic to quiz on') }, required: ['topic'] }),
+  f('career_eval', 'Evaluate a job description with A-F scoring and detailed recommendation.', { properties: { job_description: s('Full job description text') }, required: ['job_description'] }),
+  f('career_scan', 'Scan job portals for positions matching a search query.', { properties: { query: s('Job search query e.g. senior TypeScript engineer fintech') }, required: ['query'] }),
 ]

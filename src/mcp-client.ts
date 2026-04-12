@@ -1,9 +1,19 @@
 const MEMORY_MCP_URL = process.env.MEMORY_MCP_URL || 'https://memory.asikmydeen.com'
 const LIFE_MCP_URL = process.env.LIFE_MCP_URL || 'https://life.asikmydeen.com'
 const SHIP_MCP_URL = process.env.SHIP_MCP_URL || 'https://mcp.asikmydeen.com'
+const AGENT_MCP_URL = process.env.AGENT_MCP_URL || 'https://agent-mcp.asikmydeen.com'
 const MEMORY_MCP_TOKEN = process.env.MEMORY_MCP_TOKEN || process.env.MCP_AUTH_TOKEN || ''
 const LIFE_MCP_TOKEN = process.env.LIFE_MCP_TOKEN || process.env.MCP_AUTH_TOKEN || ''
 const SHIP_MCP_TOKEN = process.env.SHIP_MCP_TOKEN || ''
+const AGENT_MCP_TOKEN = process.env.AGENT_MCP_TOKEN || 'agentmcp_token_2026'
+
+const AGENT_TOOLS = new Set([
+  'agent_run', 'agent_status', 'agent_list', 'agent_cancel',
+  'crew_feature', 'crew_bugfix', 'crew_audit',
+  'research', 'decide', 'plan',
+  'tutor_solve', 'tutor_quiz', 'tutor_learn',
+  'career_eval', 'career_scan',
+])
 
 const LIFE_TOOLS = new Set([
   'context_now', 'context_member',
@@ -112,9 +122,10 @@ class McpSession {
 const memorySession = new McpSession(MEMORY_MCP_URL, MEMORY_MCP_TOKEN)
 const lifeSession = new McpSession(LIFE_MCP_URL, LIFE_MCP_TOKEN)
 const shipSession = new McpSession(SHIP_MCP_URL, SHIP_MCP_TOKEN)
+const agentSession = new McpSession(AGENT_MCP_URL, AGENT_MCP_TOKEN)
 
 export async function executeTool(name: string, args: Record<string, any>): Promise<any> {
-  const session = SHIP_TOOLS.has(name) ? shipSession : LIFE_TOOLS.has(name) ? lifeSession : memorySession
+  const session = AGENT_TOOLS.has(name) ? agentSession : SHIP_TOOLS.has(name) ? shipSession : LIFE_TOOLS.has(name) ? lifeSession : memorySession
   try {
     const response = await session.callTool(name, args)
     if (response.error) return { error: response.error.message || 'MCP tool error' }
