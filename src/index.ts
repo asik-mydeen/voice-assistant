@@ -127,6 +127,25 @@ app.post('/api/chat', async (c) => {
       { role: 'user', content: message },
     ]
 
+    // Morning context injection
+    const hour = new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", hour12: false })
+    const isMorning = parseInt(hour) >= 6 && parseInt(hour) < 11
+    if (isMorning) {
+      try {
+        const ctxRes = await fetch(`${process.env.LIFE_MCP_URL || "https://life.asikmydeen.com"}/mcp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.LIFE_MCP_TOKEN || process.env.MCP_AUTH_TOKEN || ""}`, "Accept": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "context_now", arguments: {} } }),
+          signal: AbortSignal.timeout(3000),
+        })
+        if (ctxRes.ok) {
+          const ctxData = await ctxRes.json()
+          const text = ctxData?.result?.content?.[0]?.text
+          if (text) messages[0].content += `\n\n## Morning Context\n${text.slice(0, 600)}`
+        }
+      } catch { /* silent */ }
+    }
+
     // Chat loop: call OpenAI → execute tools → feed results back → repeat
     for (let i = 0; i < 5; i++) {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -136,7 +155,7 @@ app.post('/api/chat', async (c) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
+          model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o',
           messages,
           tools: tools.length > 0 ? tools : undefined,
           tool_choice: 'auto',
@@ -167,6 +186,19 @@ app.post('/api/chat', async (c) => {
         }
         sessions.set(resolvedSessionId, session)
 
+        // Save conversation summary to memory if meaningful
+        if (session.messages.length >= 4) {
+          try {
+            const recentExchange = session.messages.slice(-4).map((m: any) => `${m.role}: ${m.content}`).join("\n")
+            await fetch(`${process.env.MEMORY_MCP_URL || "https://memory.asikmydeen.com"}/mcp`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.MEMORY_MCP_TOKEN || process.env.MCP_AUTH_TOKEN || ""}`, "Accept": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "memory_save", arguments: { content: `Zara conversation: ${recentExchange.slice(0, 400)}`, tags: ["conversation", "zara"] } } }),
+              signal: AbortSignal.timeout(3000),
+            })
+          } catch { /* silent */ }
+        }
+
         return c.json({
           response: finalResponse,
           session_id: resolvedSessionId,
@@ -179,8 +211,14 @@ app.post('/api/chat', async (c) => {
       for (const tc of choice.message.tool_calls) {
         console.log(`Shortcut tool: ${tc.function.name}`)
         const args = JSON.parse(tc.function.arguments || '{}')
-        const result = await executeTool(tc.function.name, args)
-        const output = typeof result === 'string' ? result : JSON.stringify(result)
+        let output: string
+        try {
+          const result = await executeTool(tc.function.name, args)
+          output = typeof result === 'string' ? result : JSON.stringify(result)
+        } catch (toolErr: any) {
+          console.error(`Tool ${tc.function.name} failed:`, toolErr.message)
+          output = JSON.stringify({ error: true, message: `Tool failed: ${toolErr.message}. Tell the user naturally and offer an alternative.` })
+        }
         messages.push({
           role: 'tool',
           tool_call_id: tc.id,
