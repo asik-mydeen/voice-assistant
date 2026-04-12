@@ -10,6 +10,24 @@ import { WebSocketServer } from 'ws'
 
 const app = new Hono()
 
+// ── Session Storage for Multi-Turn Conversations ──
+interface ConversationSession {
+  messages: Array<{role: string, content: string}>
+  updatedAt: number
+}
+
+const sessions = new Map<string, ConversationSession>()
+const SESSION_TTL_MS = 10 * 60 * 1000 // 10 minutes
+
+function cleanSessions() {
+  const now = Date.now()
+  for (const [key, session] of sessions) {
+    if (now - session.updatedAt > SESSION_TTL_MS) sessions.delete(key)
+  }
+}
+// Clean expired sessions every 5 minutes
+setInterval(cleanSessions, 5 * 60 * 1000)
+
 app.use('/api/*', cors())
 
 app.use('/api/*', async (c, next) => {
@@ -81,8 +99,17 @@ wss.on('connection', (ws, req) => {
 // ── Text Chat API (for iOS Shortcuts / Siri) ──
 app.post('/api/chat', async (c) => {
   try {
-    const { message, speaker } = await c.req.json()
+    const { message, speaker, session_id } = await c.req.json()
     if (!message) return c.json({ error: 'message required' }, 400)
+
+    // Auto-session: device within same 10-min window continues conversation
+    const deviceKey = c.req.header('Authorization')?.replace('Bearer ', '') || 'anon'
+    const windowKey = Math.floor(Date.now() / SESSION_TTL_MS)
+    const autoSessionId = `${deviceKey}_${windowKey}`
+    const resolvedSessionId = session_id || autoSessionId
+
+    // Load existing session or create new one
+    const session = sessions.get(resolvedSessionId) || { messages: [], updatedAt: Date.now() }
 
     const { SYSTEM_PROMPT } = await import('./prompt.js')
     const { executeTool } = await import('./mcp-client.js')
@@ -93,8 +120,10 @@ app.post('/api/chat', async (c) => {
       function: { name: f.name, description: f.description, parameters: f.parameters },
     }))
 
+    // Build messages: system prompt + conversation history + new user message
     const messages: any[] = [
       { role: 'system', content: SYSTEM_PROMPT + (speaker ? `\n\nThe current speaker is ${speaker}.` : '') },
+      ...session.messages,
       { role: 'user', content: message },
     ]
 
@@ -123,10 +152,24 @@ app.post('/api/chat', async (c) => {
       const choice = data.choices[0]
       messages.push(choice.message)
 
-      // If no tool calls, return the final response
+      // If no tool calls, save conversation and return the final response
       if (choice.finish_reason !== 'tool_calls' || !choice.message.tool_calls) {
+        const finalResponse = choice.message.content || ''
+
+        // Save conversation back to session (excluding system prompt)
+        session.messages.push({ role: 'user', content: message })
+        session.messages.push({ role: 'assistant', content: finalResponse })
+        session.updatedAt = Date.now()
+
+        // Keep last 20 exchanges to avoid token bloat
+        if (session.messages.length > 40) {
+          session.messages = session.messages.slice(-40)
+        }
+        sessions.set(resolvedSessionId, session)
+
         return c.json({
-          response: choice.message.content || '',
+          response: finalResponse,
+          session_id: resolvedSessionId,
           model: data.model,
           usage: data.usage,
         })
@@ -151,4 +194,14 @@ app.post('/api/chat', async (c) => {
     console.error('Chat error:', e)
     return c.json({ error: e.message }, 500)
   }
+})
+
+// ── Reset Conversation Session ──
+app.post('/api/chat/reset', async (c) => {
+  const deviceKey = c.req.header('Authorization')?.replace('Bearer ', '') || 'anon'
+  // Clear all sessions for this device
+  for (const key of sessions.keys()) {
+    if (key.startsWith(deviceKey)) sessions.delete(key)
+  }
+  return c.json({ status: 'ok', message: 'Conversation history cleared' })
 })
