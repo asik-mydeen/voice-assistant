@@ -88,4 +88,22 @@ export const FUNCTIONS = [
   f('tutor_quiz', 'Generate quiz questions to test knowledge on a topic.', { properties: { topic: s('Topic to quiz on') }, required: ['topic'] }),
   f('career_eval', 'Evaluate a job description with A-F scoring and detailed recommendation.', { properties: { job_description: s('Full job description text') }, required: ['job_description'] }),
   f('career_scan', 'Scan job portals for positions matching a search query.', { properties: { query: s('Job search query e.g. senior TypeScript engineer fintech') }, required: ['query'] }),
+  {
+    name: "predict",
+    description: "Predict future values for stocks, crypto, or any numeric trend using TimesFM AI forecasting. Automatically collects historical data.",
+    parameters: {
+      type: "object",
+      properties: {
+        topic: {
+          type: "string",
+          description: "What to predict e.g. 'Apple stock', 'Bitcoin price', 'Tesla', 'gold price'"
+        },
+        horizon: {
+          type: "number",
+          description: "How many days ahead to forecast (default 30)"
+        }
+      },
+      required: ["topic"]
+    }
+  },
 ]

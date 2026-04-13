@@ -13,6 +13,7 @@ const AGENT_TOOLS = new Set([
   'research', 'decide', 'plan',
   'tutor_solve', 'tutor_quiz', 'tutor_learn',
   'career_eval', 'career_scan',
+  'predict',
 ])
 
 const LIFE_TOOLS = new Set([
